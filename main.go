@@ -1,16 +1,23 @@
 package main
 
 import (
-	log "github.com/sirupsen/logrus"
+	_ "embed"
+	"encoding/json"
+	"fmt"
+	"regexp"
+	"strings"
 
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	log "github.com/sirupsen/logrus"
 )
 
 var botToken = os.Getenv("BOT_TOKEN")
+var rawChains = os.Getenv("CHAIN")
+var chains []map[string]string
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
@@ -18,6 +25,15 @@ func init() {
 	if botToken == "" {
 		log.Fatal("BOT_TOKEN is invalid")
 	}
+	if rawChains == "" {
+		log.Fatal("CHAIN config is invalid")
+	}
+	// parse chains config
+	err := json.Unmarshal([]byte(rawChains), &chains)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("%#v", chains)
 }
 
 func main() {
@@ -60,23 +76,76 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 	// If the message is "ping" reply with "Pong!"
-	if m.Content == "ping" {
+	if m.Content == "!ping" {
 		err := s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
 		if err != nil {
 			log.Error(err)
+			return
 		}
-		_, err = s.ChannelMessageSend(m.ChannelID, "Pong!")
+		err = s.MessageReactionAdd(m.ChannelID, m.ID, "💸")
 		if err != nil {
 			log.Error(err)
+			return
 		}
-	}
-
-	// If the message is "pong" reply with "Ping!"
-	if m.Content == "pong" {
-		_, err := s.ChannelMessageSend(m.ChannelID, "Ping!")
+		_, err = s.ChannelMessageSend(m.ChannelID, "Pong!")
 		if err != nil {
 			log.Error(err)
 			return
 		}
 	}
+
+	// Do we support this command?
+	re, err := regexp.Compile("!(request|help)(.*)")
+	if err != nil {
+		log.Error(err)
+		help(s, m.ChannelID)
+		return
+	}
+
+	// Do we support this bech32 prefix?
+	matches := re.FindAllStringSubmatch(m.Content, -1)
+	log.Printf("%#v\n", matches)
+	if err == nil && len(matches) > 0 {
+		cmd := matches[0][1]
+		address := strings.TrimSpace(matches[0][2])
+		switch strings.TrimSpace(cmd) {
+		case "request":
+			_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Your address is `%s`", address))
+			if err != nil {
+				log.Error(err)
+			}
+
+		default:
+			help(s, m.ChannelID)
+		}
+	} else {
+		debugError(s, m.ChannelID, err)
+	}
+}
+
+func debugError(s *discordgo.Session, channelID string, err error) {
+	if err != nil {
+		log.Error(err)
+		_, err = s.ChannelMessageSend(channelID, fmt.Sprintf("Error:\n `%s`", err))
+		if err != nil {
+			log.Error(err)
+		}
+	}
+}
+
+func isChainPrefixSupported(prefix string) bool {
+	for _, c := range chains {
+		if c["prefix"] == prefix {
+			return true
+		}
+	}
+	return false
+}
+
+//go:embed help.md
+var helpMsg string
+
+func help(s *discordgo.Session, channelID string) error {
+	_, err := s.ChannelMessageSend(channelID, helpMsg)
+	return err
 }
