@@ -71,6 +71,7 @@ func (chain Chain) Send(ctx context.Context, toAddr string, coins cosmostypes.Co
 		return err
 	}
 	faucetAddr := faucet.Address(chain.Prefix)
+	log.Infof("Sending %s from faucet address: %s", coins, faucetAddr)
 
 	msg := &banktypes.MsgSend{FromAddress: faucetAddr, ToAddress: toAddr, Amount: coins}
 	log.Debugf("MSG: %#v\n", msg)
