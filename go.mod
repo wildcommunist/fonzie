@@ -2,7 +2,10 @@ module github.com/umee-network/fonzie
 
 go 1.17
 
-require github.com/bwmarrin/discordgo v0.24.0
+require (
+	github.com/bwmarrin/discordgo v0.24.0
+	github.com/sirupsen/logrus v1.8.1
+)
 
 require (
 	github.com/gorilla/websocket v1.4.2 // indirect
