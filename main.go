@@ -1,8 +1,8 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,10 +15,12 @@ var (
 	Token string
 )
 
-func init() {
+var botToken = os.Getenv("BOT_TOKEN")
 
-	flag.StringVar(&Token, "t", "", "Bot Token")
-	flag.Parse()
+func init() {
+	if botToken == "" {
+		log.Fatal("BOT_TOKEN is invalid")
+	}
 }
 
 func main() {
