@@ -9,12 +9,22 @@ import (
 	"github.com/tendermint/starport/starport/pkg/cosmosclient"
 )
 
-type ChainInfos []ChainInfo
+type ChainInfos []*ChainInfo
+
+func (infos ChainInfos) ImportMnemonic(ctx context.Context, mnemonic string) error {
+	for _, info := range infos {
+		err := info.ImportMnemonic(ctx, mnemonic)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (infos ChainInfos) FindByPrefix(prefix string) *ChainInfo {
 	for _, info := range infos {
 		if info.Prefix == prefix {
-			return &info
+			return info
 		}
 	}
 	return nil

@@ -46,6 +46,10 @@ func init() {
 func main() {
 	// BEGIN TX EXAMPLE
 	ctx := context.Background()
+	err := chains.ImportMnemonic(ctx, mnemonic)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	dstAddr := "umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx"
 	coins := cosmostypes.NewCoins(cosmostypes.NewCoins(
@@ -56,10 +60,6 @@ func main() {
 	chain := chains.FindByPrefix(prefix)
 	if chain == nil {
 		log.Fatalf("%s prefix is not supported", prefix)
-	}
-	err := chain.ImportMnemonic(ctx, mnemonic)
-	if err != nil {
-		log.Fatal(err)
 	}
 
 	err = chain.Send(ctx, dstAddr, coins)
