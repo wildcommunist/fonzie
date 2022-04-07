@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"context"
+
 
 	"os"
 	"os/signal"
@@ -13,11 +15,17 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	log "github.com/sirupsen/logrus"
+	"github.com/tendermint/starport/starport/pkg/cosmosclient"
 )
 
 var botToken = os.Getenv("BOT_TOKEN")
 var rawChains = os.Getenv("CHAIN")
 var chains []map[string]string
+
+type ChainInfo struct {
+	Prefix string
+	RPC    string
+}
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
@@ -37,6 +45,20 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
+
+	chain, err := getChain(ctx, ChainInfo{
+		Prefix: "umee",
+		RPC:    "https://rpc.alley.umeemania-1.network.umee.cc",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = chain.BroadcastTx("123", sdktypes)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + botToken)
@@ -133,6 +155,7 @@ func debugError(s *discordgo.Session, channelID string, err error) {
 	}
 }
 
+<<<<<<< Updated upstream
 func isChainPrefixSupported(prefix string) bool {
 	for _, c := range chains {
 		if c["prefix"] == prefix {
@@ -148,4 +171,11 @@ var helpMsg string
 func help(s *discordgo.Session, channelID string) error {
 	_, err := s.ChannelMessageSend(channelID, helpMsg)
 	return err
+=======
+func getChain(ctx context.Context, info ChainInfo) (cosmosclient.Client, error) {
+	return cosmosclient.New(ctx,
+		cosmosclient.WithAddressPrefix(info.Prefix),
+		cosmosclient.WithNodeAddress(info.RPC),
+	)
+>>>>>>> Stashed changes
 }
