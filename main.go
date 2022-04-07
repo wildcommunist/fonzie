@@ -141,7 +141,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 			chain := chains.FindByPrefix(prefix)
 			if chain == nil {
-				log.Fatalf("%s prefix is not supported", prefix)
+				msg := fmt.Sprintf("%s chain prefix is not supported", prefix)
+				_, err = s.ChannelMessageSendReply(m.ChannelID, msg, m.Reference())
+				if err != nil {
+					log.Fatal(err)
+				}
+				return
 			}
 
 			coins, err := cosmostypes.ParseCoinsNormalized(funding["umee"])
