@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/cosmos/btcutil/bech32"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	log "github.com/sirupsen/logrus"
 	chain "github.com/umee-network/fonzie/chain"
@@ -132,8 +133,11 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		switch cmd {
 		case "request":
 			dstAddr := args
-			// TODO: don't hardcode, infer from address
-			prefix := "umee"
+			prefix, _, err := bech32.Decode(dstAddr, 1023)
+			if err != nil {
+				debugError(s, m.ChannelID, err)
+				return
+			}
 
 			chain := chains.FindByPrefix(prefix)
 			if chain == nil {
