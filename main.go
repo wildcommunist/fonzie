@@ -64,12 +64,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		err := s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
 		if err != nil {
 			log.Error(err)
-			return
 		}
 		_, err = s.ChannelMessageSend(m.ChannelID, "Pong!")
 		if err != nil {
 			log.Error(err)
-			return
 		}
 	}
 
