@@ -69,12 +69,18 @@ func main() {
 		cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
 	)...)
 
-	dst, err := cosmostypes.GetFromBech32("umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx", "umee")
+	src, err := cosmostypes.GetFromBech32(faucet.Address("umee"), "umee")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, err = chain.BroadcastTx("faucet", banktypes.NewMsgSend(faucet.Info.GetAddress(), dst, funding))
+	dst, err := cosmostypes.GetFromBech32("umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx", "umee")
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(src, dst)
+
+	_, err = chain.BroadcastTx("faucet", banktypes.NewMsgSend(src, dst, funding))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -193,8 +199,8 @@ func help(s *discordgo.Session, channelID string) error {
 
 func getChain(ctx context.Context, info ChainInfo) (cosmosclient.Client, error) {
 	return cosmosclient.New(ctx,
-		cosmosclient.WithAddressPrefix(info.Prefix),
-		cosmosclient.WithNodeAddress(info.RPC),
 		cosmosclient.WithKeyringBackend("memory"),
+		cosmosclient.WithNodeAddress(info.RPC),
+		cosmosclient.WithAddressPrefix(info.Prefix),
 	)
 }
