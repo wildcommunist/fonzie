@@ -44,29 +44,27 @@ func init() {
 }
 
 func main() {
-	// BEGIN TX EXAMPLE
 	ctx := context.Background()
 	err := chains.ImportMnemonic(ctx, mnemonic)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	dstAddr := "umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx"
-	coins := cosmostypes.NewCoins(cosmostypes.NewCoins(
-		cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
-	)...)
-	prefix := "umee"
+	// dstAddr := "umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx"
+	// coins := cosmostypes.NewCoins(cosmostypes.NewCoins(
+	// 	cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
+	// )...)
+	// prefix := "umee"
 
-	chain := chains.FindByPrefix(prefix)
-	if chain == nil {
-		log.Fatalf("%s prefix is not supported", prefix)
-	}
+	// chain := chains.FindByPrefix(prefix)
+	// if chain == nil {
+	// 	log.Fatalf("%s prefix is not supported", prefix)
+	// }
 
-	err = chain.Send(ctx, dstAddr, coins)
-	if err != nil {
-		log.Fatal(err)
-	}
-	// END EXAMPLE
+	// err = chain.Send(ctx, dstAddr, coins)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + botToken)
@@ -136,11 +134,39 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	matches := re.FindAllStringSubmatch(m.Content, -1)
 	log.Printf("%#v\n", matches)
 	if err == nil && len(matches) > 0 {
-		cmd := matches[0][1]
-		address := strings.TrimSpace(matches[0][2])
-		switch strings.TrimSpace(cmd) {
+		cmd := strings.TrimSpace(matches[0][1])
+		args := strings.TrimSpace(matches[0][2])
+		switch cmd {
 		case "request":
-			_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Your address is `%s`", address))
+			dstAddr := args
+			// TODO: don't hardcode, infer from address
+			prefix := "umee"
+
+			coins := cosmostypes.NewCoins(cosmostypes.NewCoins(
+				cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
+			)...)
+
+			chain := chains.FindByPrefix(prefix)
+			if chain == nil {
+				log.Fatalf("%s prefix is not supported", prefix)
+			}
+
+			err = chain.Send(context.Background(), dstAddr, coins)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			err := s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			err = s.MessageReactionAdd(m.ChannelID, m.ID, "💸")
+			if err != nil {
+				log.Error(err)
+				return
+			}
+			_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("Your address is `%s`; sent coins: %v.", dstAddr, coins))
 			if err != nil {
 				log.Error(err)
 			}
