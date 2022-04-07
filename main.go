@@ -18,10 +18,16 @@ import (
 	chain "github.com/umee-network/fonzie/chain"
 )
 
+type ChainPrefix = string
+type CoinsStr = string
+type ChainFunding = map[ChainPrefix]CoinsStr
+
 var mnemonic = os.Getenv("MNEMONIC")
 var botToken = os.Getenv("BOT_TOKEN")
 var rawChains = os.Getenv("CHAINS")
+var rawFunding = os.Getenv("FUNDING")
 var chains chain.Chains
+var funding ChainFunding
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
@@ -40,7 +46,13 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%#v", chains)
+	log.Printf("CHAINS: %#v", chains)
+	// parse chains config
+	err = json.Unmarshal([]byte(rawFunding), &funding)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("CHAIN_FUNDING: %#v", funding)
 }
 
 func main() {
@@ -123,13 +135,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			// TODO: don't hardcode, infer from address
 			prefix := "umee"
 
-			coins := cosmostypes.NewCoins(cosmostypes.NewCoins(
-				cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
-			)...)
-
 			chain := chains.FindByPrefix(prefix)
 			if chain == nil {
 				log.Fatalf("%s prefix is not supported", prefix)
+			}
+
+			coins, err := cosmostypes.ParseCoinsNormalized(funding["umee"])
+			if err != nil {
+				log.Fatal(err)
 			}
 
 			err = chain.Send(context.Background(), dstAddr, coins)
@@ -137,13 +150,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				log.Fatal(err)
 			}
 
-			err := s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
+			err = s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
 			if err != nil {
 				log.Error(err)
 				return
 			}
-			// https://discord.com/developers/docs/resources/channel#mentions
-			_, err = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Hello <@%s>! Your address is `%s`; I sent you coins: `%s`.", m.Author.ID, dstAddr, coins), m.Reference())
+			_, err = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Dispensed 💸 `%s`", coins), m.Reference())
 			if err != nil {
 				log.Error(err)
 			}
