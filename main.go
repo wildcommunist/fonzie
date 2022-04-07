@@ -10,11 +10,6 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// Variables used for command line parameters
-var (
-	Token string
-)
-
 var botToken = os.Getenv("BOT_TOKEN")
 
 func init() {
@@ -26,7 +21,7 @@ func init() {
 func main() {
 
 	// Create a new Discord session using the provided bot token.
-	dg, err := discordgo.New("Bot " + Token)
+	dg, err := discordgo.New("Bot " + botToken)
 	if err != nil {
 		fmt.Println("error creating Discord session,", err)
 		return
