@@ -22,11 +22,11 @@ import (
 var mnemonic = os.Getenv("MNEMONIC")
 var botToken = os.Getenv("BOT_TOKEN")
 var rawChains = os.Getenv("CHAINS")
-var chains []map[string]string
+var chains []ChainInfo
 
 type ChainInfo struct {
-	Prefix string
-	RPC    string
+	Prefix string `json:"prefix"`
+	RPC    string `json:"rpc"`
 }
 
 func init() {
@@ -50,36 +50,6 @@ func init() {
 }
 
 func main() {
-	ctx := context.Background()
-
-	chain, err := getChain(ctx, ChainInfo{
-		Prefix: "umee",
-		RPC:    "https://rpc.alley.umeemania-1.network.umee.cc:443",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	faucet, err := chain.AccountRegistry.Import("faucet", mnemonic, "")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	funding := cosmostypes.NewCoins(cosmostypes.NewCoins(
-		cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
-	)...)
-
-	faucetAddr := faucet.Address("umee")
-
-	dstAddr := "umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx"
-
-	msg := &banktypes.MsgSend{FromAddress: faucetAddr, ToAddress: dstAddr, Amount: funding}
-	log.Printf("MSG: %#v\n", msg)
-	_, err = chain.BroadcastTx("faucet", msg)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + botToken)
 	if err != nil {
@@ -177,7 +147,7 @@ func debugError(s *discordgo.Session, channelID string, err error) {
 
 func isChainPrefixSupported(prefix string) bool {
 	for _, c := range chains {
-		if c["prefix"] == prefix {
+		if c.Prefix == prefix {
 			return true
 		}
 	}
@@ -198,4 +168,36 @@ func getChain(ctx context.Context, info ChainInfo) (cosmosclient.Client, error) 
 		cosmosclient.WithNodeAddress(info.RPC),
 		cosmosclient.WithAddressPrefix(info.Prefix),
 	)
+}
+
+func fund() {
+	ctx := context.Background()
+
+	chain, err := getChain(ctx, ChainInfo{
+		Prefix: "umee",
+		RPC:    "https://rpc.alley.umeemania-1.network.umee.cc:443",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	faucet, err := chain.AccountRegistry.Import("faucet", mnemonic, "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	funding := cosmostypes.NewCoins(cosmostypes.NewCoins(
+		cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
+	)...)
+
+	faucetAddr := faucet.Address("umee")
+
+	dstAddr := "umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx"
+
+	msg := &banktypes.MsgSend{FromAddress: faucetAddr, ToAddress: dstAddr, Amount: funding}
+	log.Printf("MSG: %#v\n", msg)
+	_, err = chain.BroadcastTx("faucet", msg)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
