@@ -32,7 +32,7 @@ type ChainInfo struct {
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 
-	if botToken == "" {
+	if mnemonic == "" {
 		log.Fatal("MNEMONIC is invalid")
 	}
 	if botToken == "" {
