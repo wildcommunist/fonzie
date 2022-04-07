@@ -69,16 +69,18 @@ func main() {
 		cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
 	)...)
 
-	src, err := cosmostypes.GetFromBech32(faucet.Address("umee"), "umee")
+	srcAddr := faucet.Address("umee")
+	src, err := cosmostypes.GetFromBech32(srcAddr, "umee")
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	dst, err := cosmostypes.GetFromBech32("umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx", "umee")
+	dstAddr := "umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx"
+	dst, err := cosmostypes.GetFromBech32(dstAddr, "umee")
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(src, dst)
+	log.Println(srcAddr, dstAddr)
 
 	_, err = chain.BroadcastTx("faucet", banktypes.NewMsgSend(src, dst, funding))
 	if err != nil {
