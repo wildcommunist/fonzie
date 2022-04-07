@@ -163,15 +163,6 @@ func debugError(s *discordgo.Session, channelID string, err error) {
 	}
 }
 
-func isChainPrefixSupported(prefix string) bool {
-	for _, c := range chains {
-		if c.Prefix == prefix {
-			return true
-		}
-	}
-	return false
-}
-
 //go:embed help.md
 var helpMsg string
 
