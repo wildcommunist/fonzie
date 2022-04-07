@@ -1,13 +1,12 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
-	"context"
-
 
 	"os"
 	"os/signal"
@@ -155,7 +154,6 @@ func debugError(s *discordgo.Session, channelID string, err error) {
 	}
 }
 
-<<<<<<< Updated upstream
 func isChainPrefixSupported(prefix string) bool {
 	for _, c := range chains {
 		if c["prefix"] == prefix {
@@ -171,11 +169,11 @@ var helpMsg string
 func help(s *discordgo.Session, channelID string) error {
 	_, err := s.ChannelMessageSend(channelID, helpMsg)
 	return err
-=======
+}
+
 func getChain(ctx context.Context, info ChainInfo) (cosmosclient.Client, error) {
 	return cosmosclient.New(ctx,
 		cosmosclient.WithAddressPrefix(info.Prefix),
 		cosmosclient.WithNodeAddress(info.RPC),
 	)
->>>>>>> Stashed changes
 }
