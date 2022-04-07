@@ -63,22 +63,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// dstAddr := "umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx"
-	// coins := cosmostypes.NewCoins(cosmostypes.NewCoins(
-	// 	cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
-	// )...)
-	// prefix := "umee"
-
-	// chain := chains.FindByPrefix(prefix)
-	// if chain == nil {
-	// 	log.Fatalf("%s prefix is not supported", prefix)
-	// }
-
-	// err = chain.Send(ctx, dstAddr, coins)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + botToken)
 	if err != nil {
