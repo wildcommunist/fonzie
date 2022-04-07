@@ -15,13 +15,13 @@ import (
 	"github.com/bwmarrin/discordgo"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	log "github.com/sirupsen/logrus"
-	"github.com/umee-network/fonzie/chaininfo"
+	chain "github.com/umee-network/fonzie/chain"
 )
 
 var mnemonic = os.Getenv("MNEMONIC")
 var botToken = os.Getenv("BOT_TOKEN")
 var rawChains = os.Getenv("CHAINS")
-var chains chaininfo.ChainInfos
+var chains chain.Chains
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
