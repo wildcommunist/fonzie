@@ -13,12 +13,15 @@ import (
 	"syscall"
 
 	"github.com/bwmarrin/discordgo"
+	cosmostypes "github.com/cosmos/cosmos-sdk/types"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/tendermint/starport/starport/pkg/cosmosclient"
 )
 
+var mnemonic = os.Getenv("MNEMONIC")
 var botToken = os.Getenv("BOT_TOKEN")
-var rawChains = os.Getenv("CHAIN")
+var rawChains = os.Getenv("CHAINS")
 var chains []map[string]string
 
 type ChainInfo struct {
@@ -30,10 +33,13 @@ func init() {
 	log.SetFormatter(&log.JSONFormatter{})
 
 	if botToken == "" {
+		log.Fatal("MNEMONIC is invalid")
+	}
+	if botToken == "" {
 		log.Fatal("BOT_TOKEN is invalid")
 	}
 	if rawChains == "" {
-		log.Fatal("CHAIN config is invalid")
+		log.Fatal("CHAINS config cannot be blank (json array)")
 	}
 	// parse chains config
 	err := json.Unmarshal([]byte(rawChains), &chains)
@@ -48,13 +54,27 @@ func main() {
 
 	chain, err := getChain(ctx, ChainInfo{
 		Prefix: "umee",
-		RPC:    "https://rpc.alley.umeemania-1.network.umee.cc",
+		RPC:    "https://rpc.alley.umeemania-1.network.umee.cc:443",
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, err = chain.BroadcastTx("123", sdktypes)
+	faucet, err := chain.AccountRegistry.Import("faucet", mnemonic, "")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	funding := cosmostypes.NewCoins(cosmostypes.NewCoins(
+		cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
+	)...)
+
+	dst, err := cosmostypes.GetFromBech32("umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx", "umee")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = chain.BroadcastTx("faucet", banktypes.NewMsgSend(faucet.Info.GetAddress(), dst, funding))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -175,5 +195,6 @@ func getChain(ctx context.Context, info ChainInfo) (cosmosclient.Client, error) 
 	return cosmosclient.New(ctx,
 		cosmosclient.WithAddressPrefix(info.Prefix),
 		cosmosclient.WithNodeAddress(info.RPC),
+		cosmosclient.WithKeyringBackend("memory"),
 	)
 }
