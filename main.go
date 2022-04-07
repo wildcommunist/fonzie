@@ -76,7 +76,7 @@ func main() {
 	dg.AddHandler(messageCreate)
 
 	// In this example, we only care about receiving message events.
-	dg.Identify.Intents = discordgo.IntentsGuildMessages
+	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentDirectMessages
 
 	// Open a websocket connection to Discord and begin listening.
 	err = dg.Open()
