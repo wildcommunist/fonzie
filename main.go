@@ -14,20 +14,14 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
-	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	log "github.com/sirupsen/logrus"
-	"github.com/tendermint/starport/starport/pkg/cosmosclient"
+	"github.com/umee-network/fonzie/chaininfo"
 )
 
 var mnemonic = os.Getenv("MNEMONIC")
 var botToken = os.Getenv("BOT_TOKEN")
 var rawChains = os.Getenv("CHAINS")
-var chains []ChainInfo
-
-type ChainInfo struct {
-	Prefix string `json:"prefix"`
-	RPC    string `json:"rpc"`
-}
+var chains chaininfo.ChainInfos
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
@@ -50,6 +44,30 @@ func init() {
 }
 
 func main() {
+	// BEGIN TX EXAMPLE
+	ctx := context.Background()
+
+	dstAddr := "umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx"
+	coins := cosmostypes.NewCoins(cosmostypes.NewCoins(
+		cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
+	)...)
+	prefix := "umee"
+
+	chain := chains.FindByPrefix(prefix)
+	if chain == nil {
+		log.Fatalf("%s prefix is not supported", prefix)
+	}
+	err := chain.ImportMnemonic(ctx, mnemonic)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = chain.Send(ctx, dstAddr, coins)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// END EXAMPLE
+
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + botToken)
 	if err != nil {
@@ -160,44 +178,4 @@ var helpMsg string
 func help(s *discordgo.Session, channelID string) error {
 	_, err := s.ChannelMessageSend(channelID, helpMsg)
 	return err
-}
-
-func getChain(ctx context.Context, info ChainInfo) (cosmosclient.Client, error) {
-	return cosmosclient.New(ctx,
-		cosmosclient.WithKeyringBackend("memory"),
-		cosmosclient.WithNodeAddress(info.RPC),
-		cosmosclient.WithAddressPrefix(info.Prefix),
-	)
-}
-
-func fund() {
-	ctx := context.Background()
-
-	chain, err := getChain(ctx, ChainInfo{
-		Prefix: "umee",
-		RPC:    "https://rpc.alley.umeemania-1.network.umee.cc:443",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	faucet, err := chain.AccountRegistry.Import("faucet", mnemonic, "")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	funding := cosmostypes.NewCoins(cosmostypes.NewCoins(
-		cosmostypes.NewCoin("uumee", cosmostypes.NewInt(100000000)),
-	)...)
-
-	faucetAddr := faucet.Address("umee")
-
-	dstAddr := "umee1p7hp3dt94n83cn8xwvuz3lew9wn7kh04gkywdx"
-
-	msg := &banktypes.MsgSend{FromAddress: faucetAddr, ToAddress: dstAddr, Amount: funding}
-	log.Printf("MSG: %#v\n", msg)
-	_, err = chain.BroadcastTx("faucet", msg)
-	if err != nil {
-		log.Fatal(err)
-	}
 }
