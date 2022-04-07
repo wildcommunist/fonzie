@@ -149,7 +149,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				return
 			}
 
-			coins, err := cosmostypes.ParseCoinsNormalized(funding["umee"])
+			coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
 			if err != nil {
 				log.Fatal(err)
 			}
