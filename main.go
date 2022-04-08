@@ -104,15 +104,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Do we support this command?
 	re, err := regexp.Compile("!(request|help)(.*)")
 	if err != nil {
-		log.Error(err)
-		help(s, m.ChannelID)
-		return
+		log.Fatal(err)
 	}
 
 	// Do we support this bech32 prefix?
 	matches := re.FindAllStringSubmatch(m.Content, -1)
-	log.Printf("%#v\n", matches)
-	if err == nil && len(matches) > 0 {
+	log.Info("%#v\n", matches)
+	if len(matches) > 0 {
 		cmd := strings.TrimSpace(matches[0][1])
 		args := strings.TrimSpace(matches[0][2])
 		switch cmd {
@@ -164,12 +162,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		default:
 			help(s, m.ChannelID)
 		}
-	} else {
-		if m.GuildID == "" {
-			// if message is DM, respond with help
-			help(s, m.ChannelID)
-		}
-		respondError(s, m.ChannelID, m.ID, err)
+	} else if m.GuildID == "" {
+		// if message is DM, respond with help
+		help(s, m.ChannelID)
 	}
 }
 
