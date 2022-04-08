@@ -167,16 +167,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			receipts.Prune(maxAge)
 			receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
 			if receipt != nil {
-				//reportError(s, m, fmt.Errorf("already received funding in the last %s", maxAge))
 				reportError(s, m, fmt.Errorf("You must wait %s until you can get %s funding again", receipt.FundedAt.Add(maxAge).Sub(time.Now()), prefix))
 				return
 			}
 
 			// Immediately respond to Discord
-			err = s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
-			if err != nil {
-				log.Error(err)
-			}
+			sendReaction(s, m, "👍")
 
 			// Sip on the faucet by dstAddr
 			coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
@@ -198,46 +194,47 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				Amount:      coins,
 			})
 
-			// Worked
-			err = s.MessageReactionAdd(m.ChannelID, m.ID, "✅")
-			if err != nil {
-				log.Error(err)
-			}
-
-			// Finally, respond of success to Discord requester
-			_, err = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Dispensed 💸 `%s`", coins), m.Reference())
-			if err != nil {
-				log.Error(err)
-			}
+			// Everything worked, so-- respond successfully to Discord requester
+			sendReaction(s, m, "✅")
+			sendMessage(s, m, fmt.Sprintf("Dispensed 💸 `%s`", coins))
 
 		default:
-			help(s, m.ChannelID)
+			help(s, m)
 		}
 	} else if m.GuildID == "" {
-		// if message is DM, respond with help
-		help(s, m.ChannelID)
+		// If message is DM, respond with help
+		help(s, m)
 	}
 }
 
 func reportError(s *discordgo.Session, m *discordgo.MessageCreate, errToReport error) {
-	err := s.MessageReactionAdd(m.ChannelID, m.ID, "❌")
-	if err != nil {
-		log.Error(err)
-	}
-	_, err = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Error:\n `%s`", errToReport), m.Reference())
-	if err != nil {
-		log.Error(err)
-	}
+	sendReaction(s, m, "❌")
+	sendMessage(s, m, fmt.Sprintf("Error:\n `%s`", errToReport))
 }
 
 //go:embed help.md
 var helpMsg string
 
-func help(s *discordgo.Session, channelID string) error {
+func help(s *discordgo.Session, m *discordgo.MessageCreate) error {
 	acc := []string{}
 	for _, chain := range chains {
 		acc = append(acc, chain.Prefix)
 	}
-	_, err := s.ChannelMessageSend(channelID, fmt.Sprintf("**Supported address prefixes**: %s.\n\n%s", strings.Join(acc, ", "), helpMsg))
+	return sendMessage(s, m, fmt.Sprintf("**Supported address prefixes**: %s.\n\n%s", strings.Join(acc, ", "), helpMsg))
+}
+
+func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) error {
+	_, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Reference())
+	if err != nil {
+		log.Error(err)
+	}
+	return err
+}
+
+func sendReaction(s *discordgo.Session, m *discordgo.MessageCreate, reaction string) error {
+	err := s.MessageReactionAdd(m.ChannelID, m.ID, reaction)
+	if err != nil {
+		log.Error(err)
+	}
 	return err
 }
