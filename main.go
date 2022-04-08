@@ -20,14 +20,16 @@ import (
 	chain "github.com/umee-network/fonzie/chain"
 )
 
-type ChainPrefix = string
 type CoinsStr = string
+type ChainPrefix = string
+type Username = string
 type ChainFunding = map[ChainPrefix]CoinsStr
 
 type FundingReceipt struct {
-	Username string
-	FundedAt time.Time
-	Amount   cosmostypes.Coins
+	ChainPrefix ChainPrefix
+	Username    Username
+	FundedAt    time.Time
+	Amount      cosmostypes.Coins
 }
 type FundingReceipts []FundingReceipt
 
@@ -35,9 +37,9 @@ func (receipts *FundingReceipts) Add(newReceipt FundingReceipt) {
 	*receipts = append(*receipts, newReceipt)
 }
 
-func (receipts *FundingReceipts) FindByUserID(username string) *FundingReceipt {
+func (receipts *FundingReceipts) FindByChainPrefixAndUsername(prefix ChainPrefix, username Username) *FundingReceipt {
 	for _, receipt := range *receipts {
-		if receipt.Username == username {
+		if receipt.ChainPrefix == prefix && receipt.Username == username {
 			return &receipt
 		}
 	}
@@ -163,7 +165,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 			maxAge := time.Hour * 12
 			receipts.Prune(maxAge)
-			receipt := receipts.FindByUserID(m.Author.Username)
+			receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
 			if receipt != nil {
 				//reportError(s, m, fmt.Errorf("already received funding in the last %s", maxAge))
 				reportError(s, m, fmt.Errorf("You must wait %s until you can get %s funding again", receipt.FundedAt.Add(maxAge).Sub(time.Now()), prefix))
@@ -190,9 +192,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 
 			receipts.Add(FundingReceipt{
-				Username: m.Author.Username,
-				FundedAt: time.Now(),
-				Amount:   coins,
+				ChainPrefix: prefix,
+				Username:    m.Author.Username,
+				FundedAt:    time.Now(),
+				Amount:      coins,
 			})
 
 			// Worked
