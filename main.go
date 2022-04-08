@@ -165,7 +165,8 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			receipts.Prune(maxAge)
 			receipt := receipts.FindByUserID(m.Author.Username)
 			if receipt != nil {
-				reportError(s, m, fmt.Errorf("already received funding in the last %s", maxAge))
+				//reportError(s, m, fmt.Errorf("already received funding in the last %s", maxAge))
+				reportError(s, m, fmt.Errorf("You must wait %s until you can get %s funding again", receipt.FundedAt.Add(maxAge).Sub(time.Now()), prefix))
 				return
 			}
 
