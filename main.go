@@ -120,17 +120,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			dstAddr := args
 			prefix, _, err := bech32.Decode(dstAddr, 1023)
 			if err != nil {
-				debugError(s, m.ChannelID, err)
+				respondError(s, m.ChannelID, m.ID, err)
 				return
 			}
 
 			chain := chains.FindByPrefix(prefix)
 			if chain == nil {
-				msg := fmt.Sprintf("%s chain prefix is not supported", prefix)
-				_, err = s.ChannelMessageSendReply(m.ChannelID, msg, m.Reference())
-				if err != nil {
-					log.Fatal(err)
-				}
+				respondError(s, m.ChannelID, m.ID, fmt.Errorf("%s chain prefix is not supported", prefix))
 				return
 			}
 
@@ -143,13 +139,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			// Sip on the faucet by dstAddr
 			coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
 			if err != nil {
+				// fatal because the coins should have been valid in the first place at process start
 				log.Fatal(err)
 			}
-			// - using lense
+
 			err = chain.Send(dstAddr, coins)
 			if err != nil {
-				err = s.MessageReactionAdd(m.ChannelID, m.ID, "🚱")
-				log.Fatal(err)
+				respondError(s, m.ChannelID, m.ID, err)
+				return
 			}
 
 			// Worked
@@ -172,17 +169,18 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			// if message is DM, respond with help
 			help(s, m.ChannelID)
 		}
-		debugError(s, m.ChannelID, err)
+		respondError(s, m.ChannelID, m.ID, err)
 	}
 }
 
-func debugError(s *discordgo.Session, channelID string, err error) {
+func respondError(s *discordgo.Session, channelID string, msgID string, err error) {
+	err = s.MessageReactionAdd(channelID, msgID, "❌")
 	if err != nil {
 		log.Error(err)
-		_, err = s.ChannelMessageSend(channelID, fmt.Sprintf("Error:\n `%s`", err))
-		if err != nil {
-			log.Error(err)
-		}
+	}
+	_, err = s.ChannelMessageSend(channelID, fmt.Sprintf("Error:\n `%s`", err))
+	if err != nil {
+		log.Error(err)
 	}
 }
 
