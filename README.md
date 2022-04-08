@@ -1,4 +1,5 @@
 # Fonzie 👍 
+<img width=150 src="https://c.tenor.com/VOblnhsOkY4AAAAd/thumbs-up-smug.gif">
 
 The interchain cosmos faucet for discord.
 
@@ -33,3 +34,7 @@ FUNDING='{"umee":"100000000uumee","cosmos":"100000000uatom","juno":"100000000uju
 ### Bot Commands
 
 See [help.md](help.md)
+
+## Screenshots
+
+<img width="596" alt="Screen Shot 2022-04-08 at 12 49 55 AM" src="https://user-images.githubusercontent.com/42952/162380395-81da39af-f88c-4579-a02a-3188a886be90.png">
