@@ -25,19 +25,19 @@ type CoinsStr = string
 type ChainFunding = map[ChainPrefix]CoinsStr
 
 type FundingReceipt struct {
-	UserID   string
+	Username string
 	FundedAt time.Time
 	Amount   cosmostypes.Coins
 }
 type FundingReceipts []FundingReceipt
 
-func (receipts *FundingReceipts) Add(newReceipt FundingReceipts) {
-	*receipts = append(*receipts, newReceipt...)
+func (receipts *FundingReceipts) Add(newReceipt FundingReceipt) {
+	*receipts = append(*receipts, newReceipt)
 }
 
-func (receipts *FundingReceipts) FindByUserID(userID string) *FundingReceipt {
+func (receipts *FundingReceipts) FindByUserID(username string) *FundingReceipt {
 	for _, receipt := range *receipts {
-		if receipt.UserID == userID {
+		if receipt.Username == username {
 			return &receipt
 		}
 	}
@@ -62,6 +62,7 @@ var (
 	rawFunding = os.Getenv("FUNDING")
 	chains     chain.Chains
 	funding    ChainFunding
+	receipts   FundingReceipts
 )
 
 func init() {
@@ -160,6 +161,14 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				return
 			}
 
+			maxAge := time.Hour * 12
+			receipts.Prune(maxAge)
+			receipt := receipts.FindByUserID(m.Author.Username)
+			if receipt != nil {
+				reportError(s, m, fmt.Errorf("already received funding in the last %s", maxAge))
+				return
+			}
+
 			// Immediately respond to Discord
 			err = s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
 			if err != nil {
@@ -178,6 +187,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				reportError(s, m, err)
 				return
 			}
+
+			receipts.Add(FundingReceipt{
+				Username: m.Author.Username,
+				FundedAt: time.Now(),
+				Amount:   coins,
+			})
 
 			// Worked
 			err = s.MessageReactionAdd(m.ChannelID, m.ID, "✅")
