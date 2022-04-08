@@ -9,7 +9,9 @@ require (
 	github.com/bwmarrin/discordgo v0.24.0
 	github.com/cosmos/btcutil v1.0.4
 	github.com/cosmos/cosmos-sdk v0.45.2
+	github.com/go-resty/resty/v2 v2.7.0
 	github.com/sirupsen/logrus v1.8.1
+	github.com/strangelove-ventures/lens v0.3.0
 	github.com/tendermint/starport v0.19.5
 )
 
@@ -91,7 +93,6 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.10.1 // indirect
-	github.com/strangelove-ventures/lens v0.3.0 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20200815110645-5c35d600f0ca // indirect

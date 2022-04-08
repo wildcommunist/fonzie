@@ -7,6 +7,7 @@ import (
 
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+	resty "github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	lens "github.com/strangelove-ventures/lens/client"
 	"github.com/tendermint/starport/starport/pkg/cosmosclient"
@@ -88,25 +89,22 @@ func (chain Chain) Send(ctx context.Context, toAddr string, coins cosmostypes.Co
 }
 
 func (chain Chain) SendLense(toAddr string, coins cosmostypes.Coins, mnemonic string) error {
-	// For this example, lets place the key directory in your PWD.
-	pwd, _ := os.Getwd()
-	key_dir := pwd + "/keys"
-
-	// faucetAddr := faucet.Address(chain.Prefix)
-	// log.Infof("Sending %s from faucet address [%s] to recipient [%s]", coins, faucetAddr, toAddr)
-	// msg := &banktypes.MsgSend{FromAddress: faucetAddr, ToAddress: toAddr, Amount: coins}
+	chainID, err := getChainID(chain.RPC)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Build chain config
 	chainConfig_1 := lens.ChainClientConfig{
-		Key:     "default",
-		ChainID: "umeemania-1",
+		Key:     "anon",
+		ChainID: chainID,
 		RPCAddr: chain.RPC,
 		// GRPCAddr       string,
 		AccountPrefix:  chain.Prefix,
 		KeyringBackend: "memory",
 		GasAdjustment:  1.2,
 		// GasPrices:      "0.01uosmo",
-		KeyDirectory: key_dir,
+		KeyDirectory: "",
 		Debug:        true,
 		Timeout:      "20s",
 		OutputFormat: "json",
@@ -115,23 +113,24 @@ func (chain Chain) SendLense(toAddr string, coins cosmostypes.Coins, mnemonic st
 	}
 
 	// Creates client object to pull chain info
-	chainClient, err := lens.NewChainClient(&chainConfig_1, key_dir, os.Stdin, os.Stdout)
+	chainClient, err := lens.NewChainClient(&chainConfig_1, "", os.Stdin, os.Stdout)
 	if err != nil {
 		log.Fatalf("Failed to build new chain client for %s. Err: %v \n", toAddr, err)
 	}
 
 	// Lets restore a key with funds and name it "source_key", this is the wallet we'll use to send tx.
-	srcWalletAddress, err := chainClient.RestoreKey("source_key", mnemonic)
+	faucetAddr, err := chainClient.RestoreKey("anon", mnemonic)
 	if err != nil {
 		log.Fatalf("Failed to restore key. Err: %v \n", err)
 	}
+	log.Infof("Sending %s from faucet address [%s] to recipient [%s]", coins, faucetAddr, toAddr)
 
 	//	Now that we know our key name, we can set it in our chain config
-	chainConfig_1.Key = "source_key"
+	chainConfig_1.Key = "anon"
 
 	//	Build transaction message
 	req := &banktypes.MsgSend{
-		FromAddress: srcWalletAddress,
+		FromAddress: faucetAddr,
 		ToAddress:   toAddr,
 		Amount:      coins,
 	}
@@ -148,3 +147,38 @@ func (chain Chain) SendLense(toAddr string, coins cosmostypes.Coins, mnemonic st
 
 	return nil
 }
+
+func getChainID(rpcUrl string) (string, error) {
+	rpc := resty.New().SetHostURL(rpcUrl)
+
+	resp, err := rpc.R().
+		SetResult(map[string]interface{}{}).
+		SetError(map[string]interface{}{}).
+		Get("/commit")
+	if err != nil {
+		return "", err
+	}
+
+	if resp.IsError() {
+		//return "", resp.Error().(*map[string]interface{})
+		return "", fmt.Errorf("could not get chain id; http error code received %d", resp.StatusCode())
+	}
+
+	respbody := resp.Result().(*map[string]interface{})
+	result := (*respbody)["result"]
+	signedHeader := result.(map[string]interface{})["signed_header"]
+	header := signedHeader.(map[string]interface{})["header"]
+	chainID := header.(map[string]interface{})["chain_id"].(string)
+	return chainID, nil
+}
+
+/*
+"result": {
+	"signed_header": {
+	  "header": {
+	    "version": {
+	      "block": "11"
+	    },
+	    "chain_id": "umee-1",
+	    "height": "731426",
+*/
