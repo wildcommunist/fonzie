@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"os"
 	"os/signal"
@@ -22,6 +23,37 @@ import (
 type ChainPrefix = string
 type CoinsStr = string
 type ChainFunding = map[ChainPrefix]CoinsStr
+
+type FundingReceipt struct {
+	UserID   string
+	FundedAt time.Time
+	Amount   cosmostypes.Coins
+}
+type FundingReceipts []FundingReceipt
+
+func (receipts *FundingReceipts) Add(newReceipt FundingReceipts) {
+	*receipts = append(*receipts, newReceipt...)
+}
+
+func (receipts *FundingReceipts) FindByUserID(userID string) *FundingReceipt {
+	for _, receipt := range *receipts {
+		if receipt.UserID == userID {
+			return &receipt
+		}
+	}
+	return nil
+}
+
+func (receipts *FundingReceipts) Prune(maxAge time.Duration) {
+	pruned := FundingReceipts{}
+
+	for _, receipt := range *receipts {
+		if time.Now().Before(receipt.FundedAt.Add(maxAge)) {
+			pruned = append(pruned, receipt)
+		}
+	}
+	*receipts = pruned
+}
 
 var (
 	mnemonic   = os.Getenv("MNEMONIC")
