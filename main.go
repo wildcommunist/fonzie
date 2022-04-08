@@ -134,21 +134,23 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				return
 			}
 
+			// Immediately respond to Discord
+			err = s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
+			if err != nil {
+				log.Error(err)
+			}
+
+			// Sip on the faucet by dstAddr
 			coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
 			if err != nil {
 				log.Fatal(err)
 			}
-
 			err = chain.Send(context.Background(), dstAddr, coins)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			err = s.MessageReactionAdd(m.ChannelID, m.ID, "👍")
-			if err != nil {
-				log.Error(err)
-				return
-			}
+			// Finally, respond of success to Discord requester
 			_, err = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Dispensed 💸 `%s`", coins), m.Reference())
 			if err != nil {
 				log.Error(err)
