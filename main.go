@@ -147,9 +147,9 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			}
 			// - using lense
 			err = chain.SendLense(dstAddr, coins, mnemonic)
-			log.Error("after lense")
 			if err != nil {
-				log.Error(err)
+				err = s.MessageReactionAdd(m.ChannelID, m.ID, "🚱")
+				log.Fatal(err)
 			}
 
 			// Worked

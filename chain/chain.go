@@ -91,7 +91,7 @@ func (chain Chain) Send(ctx context.Context, toAddr string, coins cosmostypes.Co
 func (chain Chain) SendLense(toAddr string, coins cosmostypes.Coins, mnemonic string) error {
 	chainID, err := getChainID(chain.RPC)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	// Build chain config
@@ -115,13 +115,13 @@ func (chain Chain) SendLense(toAddr string, coins cosmostypes.Coins, mnemonic st
 	// Creates client object to pull chain info
 	chainClient, err := lens.NewChainClient(&chainConfig_1, "", os.Stdin, os.Stdout)
 	if err != nil {
-		log.Fatalf("Failed to build new chain client for %s. Err: %v \n", toAddr, err)
+		return fmt.Errorf("Failed to build new chain client for %s. Err: %v", toAddr, err)
 	}
 
 	// Lets restore a key with funds and name it "source_key", this is the wallet we'll use to send tx.
 	faucetAddr, err := chainClient.RestoreKey("anon", mnemonic)
 	if err != nil {
-		log.Fatalf("Failed to restore key. Err: %v \n", err)
+		return err
 	}
 	log.Infof("Sending %s from faucet address [%s] to recipient [%s]", coins, faucetAddr, toAddr)
 
@@ -138,10 +138,7 @@ func (chain Chain) SendLense(toAddr string, coins cosmostypes.Coins, mnemonic st
 	// Send message and get response
 	res, err := chainClient.SendMsg(context.Background(), req)
 	if err != nil {
-		if res != nil {
-			log.Fatalf("failed to send coins: code(%d) msg(%s)", res.Code, res.Logs)
-		}
-		log.Fatalf("Failed to send coins.Err: %v", err)
+		return err
 	}
 	fmt.Println(chainClient.PrintTxResponse(res))
 
