@@ -1,4 +1,5 @@
 # Fonzie 👍 
+<img width=150 src="https://c.tenor.com/VOblnhsOkY4AAAAd/thumbs-up-smug.gif">
 
 The interchain cosmos faucet for discord.
 
