@@ -118,13 +118,13 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			dstAddr := args
 			prefix, _, err := bech32.Decode(dstAddr, 1023)
 			if err != nil {
-				respondError(s, m.ChannelID, m.ID, err)
+				reportError(s, m, err)
 				return
 			}
 
 			chain := chains.FindByPrefix(prefix)
 			if chain == nil {
-				respondError(s, m.ChannelID, m.ID, fmt.Errorf("%s chain prefix is not supported", prefix))
+				reportError(s, m, fmt.Errorf("%s chain prefix is not supported", prefix))
 				return
 			}
 
@@ -143,7 +143,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 			err = chain.Send(dstAddr, coins)
 			if err != nil {
-				respondError(s, m.ChannelID, m.ID, err)
+				reportError(s, m, err)
 				return
 			}
 
@@ -168,12 +168,12 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 }
 
-func respondError(s *discordgo.Session, channelID string, msgID string, err error) {
-	err = s.MessageReactionAdd(channelID, msgID, "❌")
+func reportError(s *discordgo.Session, m *discordgo.MessageCreate, errToReport error) {
+	err := s.MessageReactionAdd(m.ChannelID, m.ID, "❌")
 	if err != nil {
 		log.Error(err)
 	}
-	_, err = s.ChannelMessageSend(channelID, fmt.Sprintf("Error:\n `%s`", err))
+	_, err = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Error:\n `%s`", errToReport), m.Reference())
 	if err != nil {
 		log.Error(err)
 	}
