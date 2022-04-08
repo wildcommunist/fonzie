@@ -3,8 +3,8 @@
 
 The interchain cosmos faucet for discord.
 
-* Supports multiple chains at once
 * Disambiguates by bech32 prefix
+* Supports multiple chains at once & rate-limiting
 * State-of-the-art emoji response technology. Inspired by the fonz [👍](https://en.wikipedia.org/wiki/Fonzie)
 
 ## Building
@@ -16,7 +16,12 @@ go build .
 
 ### Environment Variables
 
-#### An example configuration
+* `BOT_TOKEN` -- [Create a Discord token](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token)
+* `MNEMONIC`  -- 12 or 24 word seed string, shared for each chain
+* `CHAINS`    -- A JSON object, keyed by each bech32 prefix, value is a RPC endpoint
+* `FUNDING`   -- Similar to CHAINS, value is how much funding to sip with each tap
+
+#### An example configuration supporting Umee, Atom, Juno & Osmosis
 
 ```bash
 BOT_TOKEN='<discord bot token>'
@@ -33,7 +38,7 @@ FUNDING='{"umee":"100000000uumee","cosmos":"100000000uatom","juno":"100000000uju
 
 ### Bot Commands
 
-See [help.md](help.md)
+See [help.md](help.md).  This file is rendered for the `!help` command.
 
 ## Screenshots
 
