@@ -190,6 +190,10 @@ func debugError(s *discordgo.Session, channelID string, err error) {
 var helpMsg string
 
 func help(s *discordgo.Session, channelID string) error {
-	_, err := s.ChannelMessageSend(channelID, helpMsg)
+	acc := []string{}
+	for _, chain := range chains {
+		acc = append(acc, chain.Prefix)
+	}
+	_, err := s.ChannelMessageSend(channelID, fmt.Sprintf("**Supported address prefixes**: %s.\n\n%s", strings.Join(acc, ", "), helpMsg))
 	return err
 }
