@@ -145,12 +145,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			// FIXME Using starport
-			// err = chain.Send(context.Background(), dstAddr, coins)
-			// if err != nil {
-			// 	log.Fatal(err)
-			// }
-			// Using lense
+			// - using lense
 			err = chain.SendLense(dstAddr, coins, mnemonic)
 			log.Error("after lense")
 			if err != nil {
