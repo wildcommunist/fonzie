@@ -23,12 +23,14 @@ type ChainPrefix = string
 type CoinsStr = string
 type ChainFunding = map[ChainPrefix]CoinsStr
 
-var mnemonic = os.Getenv("MNEMONIC")
-var botToken = os.Getenv("BOT_TOKEN")
-var rawChains = os.Getenv("CHAINS")
-var rawFunding = os.Getenv("FUNDING")
-var chains chain.Chains
-var funding ChainFunding
+var (
+	mnemonic   = os.Getenv("MNEMONIC")
+	botToken   = os.Getenv("BOT_TOKEN")
+	rawChains  = os.Getenv("CHAINS")
+	rawFunding = os.Getenv("FUNDING")
+	chains     chain.Chains
+	funding    ChainFunding
+)
 
 func init() {
 	log.SetFormatter(&log.JSONFormatter{})
@@ -68,6 +70,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	// Cleanly close down the Discord session.
+	defer dg.Close()
 
 	// Register the messageCreate func as a callback for MessageCreate events.
 	dg.AddHandler(messageCreate)
@@ -86,9 +90,6 @@ func main() {
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
-
-	// Cleanly close down the Discord session.
-	dg.Close()
 }
 
 // This function will be called (due to AddHandler above) every time a new
