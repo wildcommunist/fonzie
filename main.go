@@ -168,6 +168,10 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			help(s, m.ChannelID)
 		}
 	} else {
+		if m.GuildID == "" {
+			// if message is DM, respond with help
+			help(s, m.ChannelID)
+		}
 		debugError(s, m.ChannelID, err)
 	}
 }
