@@ -146,7 +146,7 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				log.Fatal(err)
 			}
 			// - using lense
-			err = chain.SendLense(dstAddr, coins, mnemonic)
+			err = chain.Send(dstAddr, coins)
 			if err != nil {
 				err = s.MessageReactionAdd(m.ChannelID, m.ID, "🚱")
 				log.Fatal(err)

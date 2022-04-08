@@ -10,14 +10,13 @@ import (
 	resty "github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	lens "github.com/strangelove-ventures/lens/client"
-	"github.com/tendermint/starport/starport/pkg/cosmosclient"
 )
 
 type Chains []*Chain
 
 func (chains Chains) ImportMnemonic(ctx context.Context, mnemonic string) error {
 	for _, info := range chains {
-		err := info.ImportMnemonic(ctx, mnemonic)
+		err := info.ImportMnemonic(mnemonic)
 		if err != nil {
 			return err
 		}
@@ -35,31 +34,47 @@ func (chains Chains) FindByPrefix(prefix string) *Chain {
 }
 
 type Chain struct {
-	Prefix string               `json:"prefix"`
-	RPC    string               `json:"rpc"`
-	client *cosmosclient.Client `json:"-"`
+	Prefix string            `json:"prefix"`
+	RPC    string            `json:"rpc"`
+	client *lens.ChainClient `json:"-"`
 }
 
-func (chain *Chain) getClient(ctx context.Context) cosmosclient.Client {
+func (chain *Chain) getClient() *lens.ChainClient {
 	if chain.client == nil {
-		c, err := cosmosclient.New(ctx,
-			cosmosclient.WithKeyringBackend("memory"),
-			cosmosclient.WithNodeAddress(chain.RPC),
-			cosmosclient.WithAddressPrefix(chain.Prefix),
-		)
+		chainID, err := getChainID(chain.RPC)
+		if err != nil {
+			log.Fatalf("failed to get chain id for %s. err: %v", chain.Prefix, err)
+		}
+
+		// Build chain config
+		chainConfig := lens.ChainClientConfig{
+			Key:            "anon",
+			ChainID:        chainID,
+			RPCAddr:        chain.RPC,
+			AccountPrefix:  chain.Prefix,
+			KeyringBackend: "memory",
+			GasAdjustment:  1.2,
+			Debug:          true,
+			Timeout:        "20s",
+			OutputFormat:   "json",
+			SignModeStr:    "direct",
+			Modules:        lens.ModuleBasics,
+		}
+		chainConfig.Key = "anon"
+
+		// Creates client object to pull chain info
+		c, err := lens.NewChainClient(&chainConfig, "", os.Stdin, os.Stdout)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		chain.client = &c
+		chain.client = c
 	}
-	return *chain.client
+	return chain.client
 }
 
-func (chain *Chain) ImportMnemonic(ctx context.Context, mnemonic string) error {
-	c := chain.getClient(ctx)
-
-	_, err := c.AccountRegistry.Import("anon", mnemonic, "")
+func (chain *Chain) ImportMnemonic(mnemonic string) error {
+	_, err := chain.getClient().RestoreKey("anon", mnemonic)
 	if err != nil {
 		return err
 	}
@@ -67,67 +82,19 @@ func (chain *Chain) ImportMnemonic(ctx context.Context, mnemonic string) error {
 	return nil
 }
 
-func (chain Chain) Send(ctx context.Context, toAddr string, coins cosmostypes.Coins) error {
-	c := chain.getClient(ctx)
+func (chain Chain) Send(toAddr string, coins cosmostypes.Coins) error {
+	c := chain.getClient()
 
-	faucet, err := c.AccountRegistry.GetByName("anon")
+	faucetRawAddr, err := c.GetKeyAddress()
 	if err != nil {
 		return err
 	}
-	faucetAddr := faucet.Address(chain.Prefix)
+	faucetAddr, err := c.EncodeBech32AccAddr(faucetRawAddr)
+	if err != nil {
+		return err
+	}
+
 	log.Infof("Sending %s from faucet address [%s] to recipient [%s]", coins, faucetAddr, toAddr)
-
-	msg := &banktypes.MsgSend{FromAddress: faucetAddr, ToAddress: toAddr, Amount: coins}
-	log.Debugf("MSG: %#v\n", msg)
-
-	_, err = c.BroadcastTx("anon", msg)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (chain Chain) SendLense(toAddr string, coins cosmostypes.Coins, mnemonic string) error {
-	chainID, err := getChainID(chain.RPC)
-	if err != nil {
-		return err
-	}
-
-	// Build chain config
-	chainConfig_1 := lens.ChainClientConfig{
-		Key:     "anon",
-		ChainID: chainID,
-		RPCAddr: chain.RPC,
-		// GRPCAddr       string,
-		AccountPrefix:  chain.Prefix,
-		KeyringBackend: "memory",
-		GasAdjustment:  1.2,
-		// GasPrices:      "0.01uosmo",
-		KeyDirectory: "",
-		Debug:        true,
-		Timeout:      "20s",
-		OutputFormat: "json",
-		SignModeStr:  "direct",
-		Modules:      lens.ModuleBasics,
-	}
-
-	// Creates client object to pull chain info
-	chainClient, err := lens.NewChainClient(&chainConfig_1, "", os.Stdin, os.Stdout)
-	if err != nil {
-		return fmt.Errorf("Failed to build new chain client for %s. Err: %v", toAddr, err)
-	}
-
-	// Lets restore a key with funds and name it "source_key", this is the wallet we'll use to send tx.
-	faucetAddr, err := chainClient.RestoreKey("anon", mnemonic)
-	if err != nil {
-		return err
-	}
-	log.Infof("Sending %s from faucet address [%s] to recipient [%s]", coins, faucetAddr, toAddr)
-
-	//	Now that we know our key name, we can set it in our chain config
-	chainConfig_1.Key = "anon"
-
 	//	Build transaction message
 	req := &banktypes.MsgSend{
 		FromAddress: faucetAddr,
@@ -136,11 +103,11 @@ func (chain Chain) SendLense(toAddr string, coins cosmostypes.Coins, mnemonic st
 	}
 
 	// Send message and get response
-	res, err := chainClient.SendMsg(context.Background(), req)
+	res, err := c.SendMsg(context.Background(), req)
 	if err != nil {
 		return err
 	}
-	fmt.Println(chainClient.PrintTxResponse(res))
+	fmt.Println(c.PrintTxResponse(res))
 
 	return nil
 }
