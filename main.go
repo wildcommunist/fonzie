@@ -145,9 +145,22 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = chain.Send(context.Background(), dstAddr, coins)
+			// FIXME Using starport
+			// err = chain.Send(context.Background(), dstAddr, coins)
+			// if err != nil {
+			// 	log.Fatal(err)
+			// }
+			// Using lense
+			err = chain.SendLense(dstAddr, coins, mnemonic)
+			log.Error("after lense")
 			if err != nil {
-				log.Fatal(err)
+				log.Error(err)
+			}
+
+			// Worked
+			err = s.MessageReactionAdd(m.ChannelID, m.ID, "✅")
+			if err != nil {
+				log.Error(err)
 			}
 
 			// Finally, respond of success to Discord requester
