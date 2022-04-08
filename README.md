@@ -18,6 +18,7 @@ go build .
 #### An example configuration
 
 ```bash
+BOT_TOKEN='<discord bot token>'
 MNEMONIC='<12 or 24 word mnemonic>'
 CHAINS='[{"prefix":"umee","rpc":"https://rpc.alley.umeemania-1.network.umee.cc:443"},{"prefix":"cosmos","rpc":"https://rpc.flash.gaia-umeemania-1.network.umee.cc:443"},{"prefix":"juno","rpc":"https://rpc.section.juno-umeemania-1.network.umee.cc:443"},{"prefix":"osmo","rpc":"https://rpc.wall.osmosis-umeemania-1.network.umee.cc:443"}]'
 FUNDING='{"umee":"100000000uumee","cosmos":"100000000uatom","juno":"100000000ujuno","osmo":"100000000uosmo"}'
