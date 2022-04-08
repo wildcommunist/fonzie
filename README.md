@@ -1,9 +1,10 @@
-# Fonzie
+# Fonzie 👍 
 
 The interchain cosmos faucet for discord.
 
 * Supports multiple chains at once
 * Disambiguates by bech32 prefix
+* State-of-the-art emoji response technology. Inspired by the fonz [👍](https://en.wikipedia.org/wiki/Fonzie)
 
 ## Building
 ```bash
