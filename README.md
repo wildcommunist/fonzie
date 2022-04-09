@@ -43,3 +43,18 @@ See [help.md](help.md).  This file is rendered for the `!help` command.
 ## Screenshots
 
 <img width="596" alt="Screen Shot 2022-04-08 at 12 49 55 AM" src="https://user-images.githubusercontent.com/42952/162380395-81da39af-f88c-4579-a02a-3188a886be90.png">
+
+## Releasing
+
+### Example
+1. Suppose you want to release version `v99.99.99`
+2. Make sure you are on main and have a clean git state
+3. `bin/release v99.99.99`
+
+#### Output
+```
+Everything up-to-date
+Total 0 (delta 0), reused 0 (delta 0), pack-reused 0
+To github.com:umee-network/fonzie.git
+ * [new tag]         v0.0.17 -> v0.0.17
+```
