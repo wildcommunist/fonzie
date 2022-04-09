@@ -15,6 +15,6 @@ FROM alpine:3.14
 
 RUN apk add --no-cache bash
 
-COPY --from=0 /cosmos-discord-bot/fonzie /usr/local/bin/fonzie
+COPY --from=0 /opt/fonzie/fonzie /usr/local/bin/fonzie
 
 CMD fonzie
