@@ -11,9 +11,12 @@ builds:
 
 dockers:
   - image_templates:
-    - "us-docker.pkg.dev/umeedefi/stack/fonzie:{{ .Arch }}-{{ .Env.GITHUB_SHA }}"
-    - "us-docker.pkg.dev/umeedefi/stack/fonzie:{{ .Arch }}-{{ .Tag }}"
+    - "us-docker.pkg.dev/umeedefi/stack/fonzie:arm64-{{ .Env.GITHUB_SHA }}"
+    - "us-docker.pkg.dev/umeedefi/stack/fonzie:arm64-{{ .Tag }}"
     goos: linux
-    goarch:
-    - arm64
-    - amd64
+    goarch: arm64
+  - image_templates:
+    - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Env.GITHUB_SHA }}"
+    - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Tag }}"
+    goos: linux
+    goarch: amd64
