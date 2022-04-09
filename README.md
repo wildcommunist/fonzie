@@ -56,5 +56,5 @@ See [help.md](help.md).  This file is rendered for the `!help` command.
 Everything up-to-date
 Total 0 (delta 0), reused 0 (delta 0), pack-reused 0
 To github.com:umee-network/fonzie.git
- * [new tag]         v0.0.17 -> v0.0.17
+ * [new tag]         v99.99.99 -> v99.99.99
 ```
