@@ -1,12 +1,13 @@
 FROM golang:1.18.0-alpine3.14
 
-WORKDIR /cosmos-discord-bot
-
 RUN apk add --no-cache \
   bash \
   git
 
-COPY . .
+WORKDIR /opt/fonzie
+
+COPY go.mod go.sum *.go help.md Dockerfile ./
+COPY chain/ ./chain
 
 RUN go build .
 
