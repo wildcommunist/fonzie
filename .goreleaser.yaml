@@ -1,2 +1,7 @@
 archives:
 - format: binary
+dockers:
+  - image_templates:
+    - "us-docker.pkg.dev/umeedefi/stack/fonzie:{{ .Env.GITHUB_SHA }}"
+    - "us-docker.pkg.dev/umeedefi/stack/fonzie:{{ .Tag }}"
+    - "us-docker.pkg.dev/umeedefi/stack/fonzie:latest"
