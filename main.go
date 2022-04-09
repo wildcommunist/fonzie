@@ -22,9 +22,8 @@ import (
 
 //go:generate bash -c "if [ \"$CI\" = true ] ; then echo -n $GITHUB_REF_NAME > VERSION; fi"
 var (
-	Version string = strings.TrimSpace(version)
 	//go:embed VERSION
-	version string
+	Version string
 )
 
 type CoinsStr = string
