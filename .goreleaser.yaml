@@ -1,5 +1,14 @@
 archives:
 - format: binary
+builds:
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
 dockers:
   - image_templates:
     - "us-docker.pkg.dev/umeedefi/stack/fonzie:{{ .Env.GITHUB_SHA }}"
