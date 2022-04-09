@@ -17,6 +17,7 @@ dockers:
     goos: linux
     goarch: arm64
     dockerfile: Dockerfile.arm64
+    use: buildx
   - image_templates:
     - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Env.GITHUB_SHA }}"
     - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Tag }}"
@@ -25,6 +26,7 @@ dockers:
     goos: linux
     goarch: amd64
     dockerfile: Dockerfile.amd64
+    use: buildx
 release:
   footer: |
     ## Docker Images
