@@ -4,6 +4,7 @@
 if [ -z "$1" ]
   then
     echo "$0 <version>"
+    exit 1
 fi
 
 V="$1"
