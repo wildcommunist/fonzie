@@ -12,6 +12,11 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
+      - uses: docker/login-action@v1
+        with:
+          registry: us-docker.pkg.dev
+          username: _json_key_base64
+          password: ${{ secrets.GAR_JSON_BASE64_KEY }}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
