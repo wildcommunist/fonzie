@@ -20,7 +20,7 @@ import (
 	chain "github.com/umee-network/fonzie/chain"
 )
 
-//go:generate bash -c "if [ \"$CI\" = true ] ; then git describe --tags --abbrev=0 > VERSION; fi"
+//go:generate bash -c "if [ \"$CI\" = true ] ; then echo -n $GITHUB_REF_NAME > VERSION; fi"
 var (
 	Version string = strings.TrimSpace(version)
 	//go:embed VERSION
@@ -75,7 +75,6 @@ var (
 )
 
 func init() {
-
 	if len(os.Args) > 1 && os.Args[1] == "version" {
 		fmt.Println(Version)
 		os.Exit(0)
