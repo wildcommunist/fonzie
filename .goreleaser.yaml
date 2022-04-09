@@ -1,13 +1,13 @@
 archives:
 - format: binary
 builds:
-    goos:
-      - linux
-      - darwin
-      - windows
-    goarch:
-      - amd64
-      - arm64
+- goos:
+    - linux
+    - darwin
+    - windows
+  goarch:
+    - amd64
+    - arm64
 
 dockers:
   - image_templates:
