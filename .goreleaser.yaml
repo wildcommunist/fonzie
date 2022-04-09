@@ -14,11 +14,13 @@ dockers:
     - "us-docker.pkg.dev/umeedefi/stack/fonzie:arm64-{{ .Tag }}"
     goos: linux
     goarch: arm64
+    dockerfile: Dockerfile.arm64
   - image_templates:
     - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Env.GITHUB_SHA }}"
     - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Tag }}"
     goos: linux
     goarch: amd64
+    dockerfile: Dockerfile.amd64
 release:
   footer: |
     ## Docker Images
