@@ -1,28 +1,31 @@
 archives:
-- format: binary
+  - format: binary
 builds:
-- goos:
-    - linux
-    - darwin
-    - windows
-  goarch:
-    - arm64
-    - amd64
+  - goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - arm64
+      - amd64
+before:
+  hooks:
+    - go generate ./...
 dockers:
   - image_templates:
-    - "us-docker.pkg.dev/umeedefi/stack/fonzie:arm64-{{ .Env.GITHUB_SHA }}"
-    - "us-docker.pkg.dev/umeedefi/stack/fonzie:arm64-{{ .Tag }}"
+      - "us-docker.pkg.dev/umeedefi/stack/fonzie:arm64-{{ .Env.GITHUB_SHA }}"
+      - "us-docker.pkg.dev/umeedefi/stack/fonzie:arm64-{{ .Tag }}"
     build_flag_templates:
-    - "--platform=linux/arm64/v8"
+      - "--platform=linux/arm64/v8"
     goos: linux
     goarch: arm64
     dockerfile: Dockerfile.arm64
     use: buildx
   - image_templates:
-    - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Env.GITHUB_SHA }}"
-    - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Tag }}"
+      - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Env.GITHUB_SHA }}"
+      - "us-docker.pkg.dev/umeedefi/stack/fonzie:amd64-{{ .Tag }}"
     build_flag_templates:
-    - "--platform=linux/amd64"
+      - "--platform=linux/amd64"
     goos: linux
     goarch: amd64
     dockerfile: Dockerfile.amd64
