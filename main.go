@@ -20,6 +20,13 @@ import (
 	chain "github.com/umee-network/fonzie/chain"
 )
 
+//go:generate bash -c "if [ \"$CI\" = true ] ; then git describe --tags --abbrev=0 > VERSION; fi"
+var (
+	Version string = strings.TrimSpace(version)
+	//go:embed VERSION
+	version string
+)
+
 type CoinsStr = string
 type ChainPrefix = string
 type Username = string
@@ -68,6 +75,11 @@ var (
 )
 
 func init() {
+	if os.Args[1] == "version" {
+		fmt.Println(Version)
+		os.Exit(0)
+	}
+
 	log.SetFormatter(&log.JSONFormatter{})
 
 	if mnemonic == "" {
@@ -94,6 +106,7 @@ func init() {
 }
 
 func main() {
+
 	ctx := context.Background()
 	err := chains.ImportMnemonic(ctx, mnemonic)
 	if err != nil {
