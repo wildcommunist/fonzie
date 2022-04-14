@@ -6,6 +6,8 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/cosmos/cosmos-sdk/types"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/umee-network/fonzie/chain"
 )
 
@@ -29,6 +31,7 @@ type ChainFaucet struct {
 }
 
 func (cf ChainFaucet) Consume(quit chan bool) {
+	log.Info("starting worker ", cf.chain.Prefix)
 	var r FaucetReq
 	var rs []FaucetReq
 	const interval = time.Second * 4
@@ -37,6 +40,7 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 	for {
 		select {
 		case r = <-cf.channel:
+			log.Infof("%s worker NEW request, req: %v", cf.chain.Prefix, r)
 			rs = append(rs, r)
 			if len(rs) > 20 {
 				cf.processRequests(rs)
@@ -44,6 +48,7 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 				t.Reset(interval)
 			}
 		case <-t.C:
+			log.Infof("%s worker ticker, #num req: %d", cf.chain.Prefix, len(rs))
 			if len(rs) > 0 {
 				cf.processRequests(rs)
 				rs = make([]FaucetReq, 0)
