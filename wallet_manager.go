@@ -34,7 +34,7 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 	log.Info("starting worker ", cf.chain.Prefix)
 	var r FaucetReq
 	var rs []FaucetReq
-	const interval = time.Second * 4
+	const interval = time.Second * 7
 	var t = time.NewTicker(interval)
 
 	for {
@@ -42,7 +42,7 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 		case r = <-cf.channel:
 			log.Infof("%s worker NEW request, req: %v", cf.chain.Prefix, r)
 			rs = append(rs, r)
-			if len(rs) > 20 {
+			if len(rs) > 100 {
 				cf.processRequests(rs)
 				rs = make([]FaucetReq, 0)
 				t.Reset(interval)
