@@ -96,7 +96,8 @@ func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostype
 	var inputs []banktypes.Input
 	var outputs []banktypes.Output
 	for i := range toAddr {
-		log.Infof("Sending %s from faucet address [%s] to recipient [%s]", coins[i], faucetAddrStr, toAddr[i])
+		log.Infof("Sending %s from faucet address [%s] to recipient [%s]",
+			coins[i], faucetAddrStr, c.MustEncodeAccAddr(toAddr[i]))
 		inputs = append(inputs, banktypes.NewInput(faucetRawAddr, coins[i]))
 		outputs = append(outputs, banktypes.NewOutput(toAddr[i], coins[i]))
 	}

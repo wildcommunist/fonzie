@@ -179,7 +179,6 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 
 	// Do we support this bech32 prefix?
 	matches := fh.cmd.FindAllStringSubmatch(m.Content, -1)
-	log.Info("cmd matches: %#v\n", matches)
 	if len(matches) > 0 {
 		cmd := strings.TrimSpace(matches[0][1])
 		args := strings.TrimSpace(matches[0][2])
@@ -208,7 +207,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 			receipts.Prune(maxAge)
 			receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
 			if receipt != nil {
-				reportError(s, m, fmt.Errorf("You must wait %s until you can get %s funding again", receipt.FundedAt.Add(maxAge).Sub(time.Now()).Round(2*time.Second), prefix))
+				reportError(s, m, fmt.Errorf("You must wait %v until you can get %s funding again", receipt.FundedAt.Add(maxAge).Sub(time.Now()).Round(2*time.Second), prefix))
 				return
 			}
 			receipts.Add(FundingReceipt{
