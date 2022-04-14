@@ -208,7 +208,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 			receipts.Prune(maxAge)
 			receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
 			if receipt != nil {
-				reportError(s, m, fmt.Errorf("You must wait %s until you can get %s funding again", receipt.FundedAt.Add(maxAge).Sub(time.Now()), prefix))
+				reportError(s, m, fmt.Errorf("You must wait %s until you can get %s funding again", receipt.FundedAt.Add(maxAge).Sub(time.Now()).Round(2*time.Second), prefix))
 				return
 			}
 			receipts.Add(FundingReceipt{
