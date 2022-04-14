@@ -54,9 +54,9 @@ func (receipts *FundingReceipts) FindByChainPrefixAndUsername(prefix ChainPrefix
 
 func (receipts *FundingReceipts) Prune(maxAge time.Duration) {
 	pruned := FundingReceipts{}
-
+	now := time.Now()
 	for _, receipt := range *receipts {
-		if time.Now().Before(receipt.FundedAt.Add(maxAge)) {
+		if now.Before(receipt.FundedAt.Add(maxAge)) {
 			pruned = append(pruned, receipt)
 		}
 	}
@@ -68,12 +68,11 @@ var (
 	botToken   = os.Getenv("BOT_TOKEN")
 	rawChains  = os.Getenv("CHAINS")
 	rawFunding = os.Getenv("FUNDING")
-	chains     chain.Chains
 	funding    ChainFunding
 	receipts   FundingReceipts
 )
 
-func init() {
+func initChains() chain.Chains {
 	if len(os.Args) > 1 && os.Args[1] == "version" {
 		fmt.Println(Version)
 		os.Exit(0)
@@ -91,6 +90,7 @@ func init() {
 		log.Fatal("CHAINS config cannot be blank (json array)")
 	}
 	// parse chains config
+	var chains chain.Chains
 	err := json.Unmarshal([]byte(rawChains), &chains)
 	if err != nil {
 		log.Fatal(err)
@@ -102,9 +102,11 @@ func init() {
 		log.Fatal(err)
 	}
 	log.Printf("CHAIN_FUNDING: %#v", funding)
+	return chains
 }
 
 func main() {
+	chains := initChains()
 
 	ctx := context.Background()
 	err := chains.ImportMnemonic(ctx, mnemonic)
@@ -117,13 +119,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	// Cleanly close down the Discord session.
 	defer dg.Close()
 
-	// Register the messageCreate func as a callback for MessageCreate events.
-	dg.AddHandler(messageCreate)
+	fh := NewFaucetHandler(chains)
+	dg.AddHandler(fh)
 
-	// In this example, we only care about receiving message events.
+	// we only care about receiving message events.
 	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentDirectMessages
 
 	// Open a websocket connection to Discord and begin listening.
@@ -139,24 +140,46 @@ func main() {
 	<-sc
 }
 
+type FaucetHandler struct {
+	faucets map[string]ChainFaucet
+	quit    chan bool
+	chains  chain.Chains
+
+	cmd *regexp.Regexp
+}
+
+func NewFaucetHandler(chains chain.Chains) FaucetHandler {
+	re, err := regexp.Compile("!(request|help)(.*)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	var faucets = make(map[string]ChainFaucet)
+	var quit = make(chan bool)
+	for _, c := range chains {
+		f := ChainFaucet{make(chan FaucetReq), c}
+		faucets[c.Prefix] = f
+		go f.Consume(quit)
+	}
+	return FaucetHandler{
+		faucets: faucets,
+		quit:    quit,
+		chains:  chains,
+		cmd:     re,
+	}
+}
+
 // This function will be called (due to AddHandler above) every time a new
 // message is created on any channel that the authenticated bot has access to.
-func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
+func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// Ignore all messages created by the bot itself
 	// This isn't required in this specific example but it's a good practice.
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
 
-	// Do we support this command?
-	re, err := regexp.Compile("!(request|help)(.*)")
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Do we support this bech32 prefix?
-	matches := re.FindAllStringSubmatch(m.Content, -1)
-	log.Info("%#v\n", matches)
+	matches := fh.cmd.FindAllStringSubmatch(m.Content, -1)
+	log.Info("cmd matches: %#v\n", matches)
 	if len(matches) > 0 {
 		cmd := strings.TrimSpace(matches[0][1])
 		args := strings.TrimSpace(matches[0][2])
@@ -169,9 +192,15 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				return
 			}
 
-			chain := chains.FindByPrefix(prefix)
-			if chain == nil {
+			faucet, ok := fh.faucets[prefix]
+			if !ok {
 				reportError(s, m, fmt.Errorf("%s chain prefix is not supported", prefix))
+				return
+			}
+			coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
+			if err != nil {
+				reportError(s, m, fmt.Errorf("%s chain prefix is not supported, err: %v", prefix, err))
+				log.Error(err)
 				return
 			}
 
@@ -182,40 +211,27 @@ func messageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 				reportError(s, m, fmt.Errorf("You must wait %s until you can get %s funding again", receipt.FundedAt.Add(maxAge).Sub(time.Now()), prefix))
 				return
 			}
-
-			// Immediately respond to Discord
-			sendReaction(s, m, "👍")
-
-			// Sip on the faucet by dstAddr
-			coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
-			if err != nil {
-				// fatal because the coins should have been valid in the first place at process start
-				log.Fatal(err)
-			}
-
-			err = chain.Send(dstAddr, coins)
-			if err != nil {
-				reportError(s, m, err)
-				return
-			}
-
 			receipts.Add(FundingReceipt{
 				ChainPrefix: prefix,
 				Username:    m.Author.Username,
 				FundedAt:    time.Now(),
 				Amount:      coins,
 			})
+			recipient, err := faucet.chain.DecodeAddr(dstAddr)
+			if err != nil {
+				reportError(s, m, fmt.Errorf("malformed destination address, err: %w", err))
+			}
 
-			// Everything worked, so-- respond successfully to Discord requester
-			sendReaction(s, m, "✅")
-			sendMessage(s, m, fmt.Sprintf("Dispensed 💸 `%s`", coins))
+			// Immediately respond to Discord
+			sendReaction(s, m, "👍")
+			faucet.channel <- FaucetReq{recipient, coins, s, m}
 
 		default:
-			help(s, m)
+			help(s, m, fh.chains)
 		}
 	} else if m.GuildID == "" {
 		// If message is DM, respond with help
-		help(s, m)
+		help(s, m, fh.chains)
 	}
 }
 
@@ -227,7 +243,7 @@ func reportError(s *discordgo.Session, m *discordgo.MessageCreate, errToReport e
 //go:embed help.md
 var helpMsg string
 
-func help(s *discordgo.Session, m *discordgo.MessageCreate) error {
+func help(s *discordgo.Session, m *discordgo.MessageCreate, chains chain.Chains) error {
 	acc := []string{}
 	for _, chain := range chains {
 		acc = append(acc, chain.Prefix)

@@ -82,9 +82,39 @@ func (chain *Chain) ImportMnemonic(mnemonic string) error {
 	return nil
 }
 
+func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostypes.Coins) error {
+	c := chain.getClient()
+	faucetRawAddr, err := c.GetKeyAddress()
+	if err != nil {
+		return err
+	}
+	faucetAddrStr, err := c.EncodeBech32AccAddr(faucetRawAddr)
+	if err != nil {
+		return err
+	}
+
+	var inputs []banktypes.Input
+	var outputs []banktypes.Output
+	for i := range toAddr {
+		log.Infof("Sending %s from faucet address [%s] to recipient [%s]", coins[i], faucetAddrStr, toAddr[i])
+		inputs = append(inputs, banktypes.NewInput(faucetRawAddr, coins[i]))
+		outputs = append(outputs, banktypes.NewOutput(toAddr[i], coins[i]))
+	}
+	req := &banktypes.MsgMultiSend{
+		Inputs:  inputs,
+		Outputs: outputs,
+	}
+
+	return chain.sendMsg(req, c)
+}
+
+func (chain Chain) DecodeAddr(a string) (cosmostypes.AccAddress, error) {
+	c := chain.getClient()
+	return c.DecodeBech32AccAddr(a)
+}
+
 func (chain Chain) Send(toAddr string, coins cosmostypes.Coins) error {
 	c := chain.getClient()
-
 	faucetRawAddr, err := c.GetKeyAddress()
 	if err != nil {
 		return err
@@ -95,20 +125,21 @@ func (chain Chain) Send(toAddr string, coins cosmostypes.Coins) error {
 	}
 
 	log.Infof("Sending %s from faucet address [%s] to recipient [%s]", coins, faucetAddr, toAddr)
-	//	Build transaction message
 	req := &banktypes.MsgSend{
 		FromAddress: faucetAddr,
 		ToAddress:   toAddr,
 		Amount:      coins,
 	}
 
-	// Send message and get response
-	res, err := c.SendMsg(context.Background(), req)
+	return chain.sendMsg(req, c)
+}
+
+func (chain Chain) sendMsg(msg cosmostypes.Msg, c *lens.ChainClient) error {
+	res, err := c.SendMsg(context.Background(), msg)
 	if err != nil {
 		return err
 	}
 	fmt.Println(c.PrintTxResponse(res))
-
 	return nil
 }
 
