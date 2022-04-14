@@ -122,7 +122,7 @@ func main() {
 	defer dg.Close()
 
 	fh := NewFaucetHandler(chains)
-	dg.AddHandler(fh)
+	dg.AddHandler(fh.handleDispense)
 
 	// we only care about receiving message events.
 	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentDirectMessages
