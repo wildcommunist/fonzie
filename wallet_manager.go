@@ -42,7 +42,7 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 		case r = <-cf.channel:
 			log.Infof("%s worker NEW request, req: %v", cf.chain.Prefix, r)
 			rs = append(rs, r)
-			if len(rs) > 100 {
+			if len(rs) > 160 {
 				cf.processRequests(rs)
 				rs = make([]FaucetReq, 0)
 				t.Reset(interval)
@@ -79,7 +79,7 @@ func (cf ChainFaucet) processRequests(rs []FaucetReq) {
 		for _, r := range rs {
 			// Everything worked, so-- respond successfully to Discord requester
 			sendReaction(r.session, r.msg, "✅")
-			sendMessage(r.session, r.msg, fmt.Sprintf("Dispensed 💸 `%s`",  r.Coins))
+			sendMessage(r.session, r.msg, fmt.Sprintf("Dispensed 💸 `%s`",  .Coins))
 		}
 	}
 }
