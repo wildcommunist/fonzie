@@ -101,9 +101,9 @@ func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostype
 			return err
 		}
 		log.Infof("Sending %s from faucet address [%s] to recipient [%s]",
-			coins[i], faucetAddrStr)
-		inputs = append(inputs, banktypes.Input{faucetAddrStr, coins[i]})
-		outputs = append(outputs, banktypes.Output{recipient, coins[i]})
+			coins[i], faucetAddrStr, toAddr[i])
+		inputs = append(inputs, banktypes.Input{Address: faucetAddrStr, Coins: coins[i]})
+		outputs = append(outputs, banktypes.Output{Address: recipient, Coins: coins[i]})
 	}
 	req := &banktypes.MsgMultiSend{
 		Inputs:  inputs,
@@ -149,7 +149,7 @@ func (chain Chain) sendMsg(msg cosmostypes.Msg, c *lens.ChainClient) error {
 }
 
 func getChainID(rpcUrl string) (string, error) {
-	rpc := resty.New().SetHostURL(rpcUrl)
+	rpc := resty.New().SetBaseURL(rpcUrl)
 
 	resp, err := rpc.R().
 		SetResult(map[string]interface{}{}).
