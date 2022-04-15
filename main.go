@@ -136,7 +136,7 @@ func main() {
 	// Wait here until CTRL-C or other term signal is received.
 	log.Info("Bot is now running.  Press CTRL-C to exit.")
 	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
+	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
 }
 
@@ -207,7 +207,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 			receipts.Prune(maxAge)
 			receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
 			if receipt != nil {
-				reportError(s, m, fmt.Errorf("You must wait %v until you can get %s funding again", receipt.FundedAt.Add(maxAge).Sub(time.Now()).Round(2*time.Second), prefix))
+				reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(maxAge)).Round(2*time.Second), prefix))
 				return
 			}
 			receipts.Add(FundingReceipt{
