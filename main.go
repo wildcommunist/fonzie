@@ -68,6 +68,7 @@ var (
 	botToken   = os.Getenv("BOT_TOKEN")
 	rawChains  = os.Getenv("CHAINS")
 	rawFunding = os.Getenv("FUNDING")
+	isSilent   = os.Getenv("SILENT") != ""
 	funding    ChainFunding
 	receipts   FundingReceipts
 )
@@ -263,7 +264,9 @@ func help(s *discordgo.Session, m *discordgo.MessageCreate, chains chain.Chains)
 }
 
 func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) error {
-	return nil
+	if isSilent {
+		return nil
+	}
 	directMessageChannel, err := s.UserChannelCreate(m.Author.ID)
 	if err != nil {
 		return err
@@ -272,10 +275,12 @@ func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) e
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
 func sendReaction(s *discordgo.Session, m *discordgo.MessageCreate, reaction string) error {
+	if isSilent {
+		return nil
+	}
 	return s.MessageReactionAdd(m.ChannelID, m.ID, reaction)
 }
