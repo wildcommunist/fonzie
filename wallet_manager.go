@@ -79,7 +79,7 @@ func (cf ChainFaucet) processRequests(rs []FaucetReq) {
 		for _, r := range rs {
 			// Everything worked, so-- respond successfully to Discord requester
 			sendReaction(r.session, r.msg, "✅")
-			sendMessage(r.session, r.msg, fmt.Sprintf("Dispensed 💸 `%s`",  .Coins))
+			sendMessage(r.session, r.msg, fmt.Sprintf("Dispensed 💸 `%s`", r.Coins))
 		}
 	}
 }
