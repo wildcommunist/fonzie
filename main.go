@@ -263,6 +263,7 @@ func help(s *discordgo.Session, m *discordgo.MessageCreate, chains chain.Chains)
 }
 
 func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) error {
+	return nil
 	directMessageChannel, err := s.UserChannelCreate(m.Author.ID)
 	if err != nil {
 		return err
