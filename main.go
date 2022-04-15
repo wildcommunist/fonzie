@@ -68,7 +68,7 @@ var (
 	botToken   = os.Getenv("BOT_TOKEN")
 	rawChains  = os.Getenv("CHAINS")
 	rawFunding = os.Getenv("FUNDING")
-	isSilent   = os.Getenv("SILENT") != ""
+	isSilent   = true //os.Getenv("SILENT") != ""
 	funding    ChainFunding
 	receipts   FundingReceipts
 )
@@ -181,10 +181,8 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 	// Do we support this bech32 prefix?
 	matches := fh.cmd.FindAllStringSubmatch(m.Content, -1)
 	if len(matches) > 0 {
-		// for each match/request, do--
+		// for each matched request, do--
 		for _, match := range matches {
-			// cmd := strings.TrimSpace(matches[0][1])
-			// args := strings.TrimSpace(matches[0][2])
 			cmd := strings.TrimSpace(match[1])
 			args := strings.TrimSpace(match[2])
 			switch cmd {
