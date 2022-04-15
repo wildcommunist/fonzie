@@ -181,56 +181,64 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 	// Do we support this bech32 prefix?
 	matches := fh.cmd.FindAllStringSubmatch(m.Content, -1)
 	if len(matches) > 0 {
-		cmd := strings.TrimSpace(matches[0][1])
-		args := strings.TrimSpace(matches[0][2])
-		switch cmd {
-		case "request":
-			dstAddr := args
-			prefix, _, err := bech32.Decode(dstAddr, 1023)
-			if err != nil {
-				reportError(s, m, err)
-				return
+		// for each match/request, do--
+		for _, match := range matches {
+			// cmd := strings.TrimSpace(matches[0][1])
+			// args := strings.TrimSpace(matches[0][2])
+			cmd := strings.TrimSpace(match[1])
+			args := strings.TrimSpace(match[2])
+			switch cmd {
+			case "request":
+				// TODO if role doesn't exist, reply with help and return
+				// - "umeemaniac"
+				// - ROLE_REQUIRED="role string/id", optional from env
+				dstAddr := args
+				prefix, _, err := bech32.Decode(dstAddr, 1023)
+				if err != nil {
+					reportError(s, m, err)
+					return
+				}
+
+				faucet, ok := fh.faucets[prefix]
+				if !ok {
+					reportError(s, m, fmt.Errorf("%s chain prefix is not supported", prefix))
+					return
+				}
+				coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
+				if err != nil {
+					reportError(s, m, fmt.Errorf("%s chain prefix is not supported, err: %v", prefix, err))
+					log.Error(err)
+					return
+				}
+
+				maxAge := time.Hour * 12
+				receipts.Prune(maxAge)
+				receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
+				if receipt != nil {
+					reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(maxAge)).Round(2*time.Second), prefix))
+					return
+				}
+
+				recipient, err := faucet.chain.DecodeAddr(dstAddr)
+				if err != nil {
+					reportError(s, m, fmt.Errorf("malformed destination address, err: %w", err))
+					return
+				}
+
+				// Immediately respond to Discord
+				sendReaction(s, m, "👍")
+				faucet.channel <- FaucetReq{recipient, coins, s, m}
+
+				receipts.Add(FundingReceipt{
+					ChainPrefix: prefix,
+					Username:    m.Author.Username,
+					FundedAt:    time.Now(),
+					Amount:      coins,
+				})
+
+			default:
+				help(s, m, fh.chains)
 			}
-
-			faucet, ok := fh.faucets[prefix]
-			if !ok {
-				reportError(s, m, fmt.Errorf("%s chain prefix is not supported", prefix))
-				return
-			}
-			coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
-			if err != nil {
-				reportError(s, m, fmt.Errorf("%s chain prefix is not supported, err: %v", prefix, err))
-				log.Error(err)
-				return
-			}
-
-			maxAge := time.Hour * 12
-			receipts.Prune(maxAge)
-			receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
-			if receipt != nil {
-				reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(maxAge)).Round(2*time.Second), prefix))
-				return
-			}
-
-			recipient, err := faucet.chain.DecodeAddr(dstAddr)
-			if err != nil {
-				reportError(s, m, fmt.Errorf("malformed destination address, err: %w", err))
-				return
-			}
-
-			// Immediately respond to Discord
-			sendReaction(s, m, "👍")
-			faucet.channel <- FaucetReq{recipient, coins, s, m}
-
-			receipts.Add(FundingReceipt{
-				ChainPrefix: prefix,
-				Username:    m.Author.Username,
-				FundedAt:    time.Now(),
-				Amount:      coins,
-			})
-
-		default:
-			help(s, m, fh.chains)
 		}
 	} else if m.GuildID == "" {
 		// If message is DM, respond with help
