@@ -251,17 +251,18 @@ func help(s *discordgo.Session, m *discordgo.MessageCreate, chains chain.Chains)
 }
 
 func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) error {
-	_, err := s.ChannelMessageSendReply(m.ChannelID, msg, m.Reference())
+	directMessageChannel, err := s.UserChannelCreate(m.Author.ID)
 	if err != nil {
-		log.Error(err)
+		return err
 	}
-	return err
+	_, err = s.ChannelMessageSend(directMessageChannel.ID, msg)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func sendReaction(s *discordgo.Session, m *discordgo.MessageCreate, reaction string) error {
-	err := s.MessageReactionAdd(m.ChannelID, m.ID, reaction)
-	if err != nil {
-		log.Error(err)
-	}
-	return err
+	return s.MessageReactionAdd(m.ChannelID, m.ID, reaction)
 }
