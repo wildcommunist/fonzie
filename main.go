@@ -210,20 +210,23 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 				reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(maxAge)).Round(2*time.Second), prefix))
 				return
 			}
+
+			recipient, err := faucet.chain.DecodeAddr(dstAddr)
+			if err != nil {
+				reportError(s, m, fmt.Errorf("malformed destination address, err: %w", err))
+				return
+			}
+
+			// Immediately respond to Discord
+			sendReaction(s, m, "👍")
+			faucet.channel <- FaucetReq{recipient, coins, s, m}
+
 			receipts.Add(FundingReceipt{
 				ChainPrefix: prefix,
 				Username:    m.Author.Username,
 				FundedAt:    time.Now(),
 				Amount:      coins,
 			})
-			recipient, err := faucet.chain.DecodeAddr(dstAddr)
-			if err != nil {
-				reportError(s, m, fmt.Errorf("malformed destination address, err: %w", err))
-			}
-
-			// Immediately respond to Discord
-			sendReaction(s, m, "👍")
-			faucet.channel <- FaucetReq{recipient, coins, s, m}
 
 		default:
 			help(s, m, fh.chains)
@@ -235,19 +238,28 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 }
 
 func reportError(s *discordgo.Session, m *discordgo.MessageCreate, errToReport error) {
-	sendReaction(s, m, "❌")
-	sendMessage(s, m, fmt.Sprintf("Error:\n `%s`", errToReport))
+	err := sendReaction(s, m, "❌")
+	if err != nil {
+		log.Error(err)
+	}
+	err = sendMessage(s, m, fmt.Sprintf("Error:\n `%s`", errToReport))
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 //go:embed help.md
 var helpMsg string
 
-func help(s *discordgo.Session, m *discordgo.MessageCreate, chains chain.Chains) error {
+func help(s *discordgo.Session, m *discordgo.MessageCreate, chains chain.Chains) {
 	acc := []string{}
 	for _, chain := range chains {
 		acc = append(acc, chain.Prefix)
 	}
-	return sendMessage(s, m, fmt.Sprintf("**Supported address prefixes**: %s.\n\n%s", strings.Join(acc, ", "), helpMsg))
+	err := sendMessage(s, m, fmt.Sprintf("**Supported address prefixes**: %s.\n\n%s", strings.Join(acc, ", "), helpMsg))
+	if err != nil {
+		log.Error(err)
+	}
 }
 
 func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) error {
