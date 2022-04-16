@@ -68,7 +68,7 @@ var (
 	botToken   = os.Getenv("BOT_TOKEN")
 	rawChains  = os.Getenv("CHAINS")
 	rawFunding = os.Getenv("FUNDING")
-	isSilent   = true //os.Getenv("SILENT") != ""
+	isSilent   = os.Getenv("SILENT") != ""
 	funding    ChainFunding
 	receipts   FundingReceipts
 )
@@ -135,7 +135,11 @@ func main() {
 	}
 
 	// Wait here until CTRL-C or other term signal is received.
-	log.Info("Bot is now running.  Press CTRL-C to exit.")
+	if isSilent {
+		log.Info("SILENT MODE:  The Fonz is still running.  Press CTRL-C to exit.")
+	} else {
+		log.Info("The Fonz bot is now thumbs-up'ing.  Press CTRL-C to exit.")
+	}
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	<-sc
