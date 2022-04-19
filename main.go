@@ -136,7 +136,7 @@ func main() {
 
 	// Wait here until CTRL-C or other term signal is received.
 	if isSilent {
-		log.Info("SILENT MODE:  The Fonz is still running.  Press CTRL-C to exit.")
+		log.Info("SILENT MODE:  The Fonz is still running, only reporting errors.  Press CTRL-C to exit.")
 	} else {
 		log.Info("The Fonz bot is now thumbs-up'ing.  Press CTRL-C to exit.")
 	}
@@ -249,11 +249,16 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 }
 
 func reportError(s *discordgo.Session, m *discordgo.MessageCreate, errToReport error) {
+	if m.Author.Bot {
+		// guard against known bots
+		return
+	}
 	err := sendReaction(s, m, "❌")
 	if err != nil {
 		log.Error(err)
 	}
-	err = sendMessage(s, m, fmt.Sprintf("Error:\n `%s`", errToReport))
+	// Send errors to channel, even when isSilent
+	_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("<@%s>, there is an error in your request:\n `%s`", m.Author.ID, errToReport))
 	if err != nil {
 		log.Error(err)
 	}
@@ -274,7 +279,7 @@ func help(s *discordgo.Session, m *discordgo.MessageCreate, chains chain.Chains)
 }
 
 func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) error {
-	if isSilent {
+	if isSilent || m.Author.Bot {
 		return nil
 	}
 	directMessageChannel, err := s.UserChannelCreate(m.Author.ID)
@@ -289,7 +294,7 @@ func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) e
 }
 
 func sendReaction(s *discordgo.Session, m *discordgo.MessageCreate, reaction string) error {
-	if isSilent {
+	if isSilent || m.Author.Bot {
 		return nil
 	}
 	return s.MessageReactionAdd(m.ChannelID, m.ID, reaction)
