@@ -100,7 +100,7 @@ func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostype
 		if err != nil {
 			return err
 		}
-		log.Infof("Sending %s from faucet address [%s] to recipient [%s]",
+		log.Infof("Multi sending %s from faucet address [%s] to recipient [%s]",
 			coins[i], faucetAddrStr, toAddr[i])
 		inputs = append(inputs, banktypes.Input{Address: faucetAddrStr, Coins: coins[i]})
 		outputs = append(outputs, banktypes.Output{Address: recipient, Coins: coins[i]})

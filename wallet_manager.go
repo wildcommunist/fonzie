@@ -46,6 +46,8 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 				cf.processRequests(rs)
 				rs = make([]FaucetReq, 0)
 				t.Reset(interval)
+			} else {
+				log.Infof("%s worker waiting for more requests, %v", cf.chain.Prefix, r)
 			}
 		case <-t.C:
 			log.Infof("%s worker ticker, #num req: %d", cf.chain.Prefix, len(rs))
