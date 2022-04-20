@@ -58,7 +58,8 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 			if len(rs) > 0 {
 				cf.processRequests(rs)
 			}
-			return
+			// die so kubernetes restarts pod
+			log.Fatal("Worker ", cf.chain.Prefix, " quit")
 		}
 	}
 }
