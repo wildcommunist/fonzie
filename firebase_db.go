@@ -3,8 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"time"
+
+	b64 "encoding/base64"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -49,6 +52,27 @@ func init() {
 // ProvideFirestore returns a *firestore.Client
 func initFirestore() (*firestore.Client, error) {
 	ctx = context.Background()
+	if os.Getenv("GCP_CREDENTIALS") == "" {
+		// import to file
+		json, err := b64.StdEncoding.DecodeString(os.Getenv("GCP_CREDENTIALS"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		file, err := ioutil.TempFile("dir", "prefix")
+		if err != nil {
+			log.Fatal(err)
+		}
+		message := []byte(json)
+		err = ioutil.WriteFile(file.Name(), message, 0644)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// set env GCP expects to file
+		err = os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file.Name())
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	conf := &firebase.Config{ProjectID: os.Getenv("GCP_PROJECT")}
 
 	app, err := firebase.NewApp(ctx, conf)
