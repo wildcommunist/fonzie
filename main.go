@@ -27,41 +27,7 @@ var (
 )
 
 type CoinsStr = string
-type ChainPrefix = string
-type Username = string
 type ChainFunding = map[ChainPrefix]CoinsStr
-
-type FundingReceipt struct {
-	ChainPrefix ChainPrefix
-	Username    Username
-	FundedAt    time.Time
-	Amount      cosmostypes.Coins
-}
-type FundingReceipts []FundingReceipt
-
-func (receipts *FundingReceipts) Add(newReceipt FundingReceipt) {
-	*receipts = append(*receipts, newReceipt)
-}
-
-func (receipts *FundingReceipts) FindByChainPrefixAndUsername(prefix ChainPrefix, username Username) *FundingReceipt {
-	for _, receipt := range *receipts {
-		if receipt.ChainPrefix == prefix && receipt.Username == username {
-			return &receipt
-		}
-	}
-	return nil
-}
-
-func (receipts *FundingReceipts) Prune(maxAge time.Duration) {
-	pruned := FundingReceipts{}
-	now := time.Now()
-	for _, receipt := range *receipts {
-		if now.Before(receipt.FundedAt.Add(maxAge)) {
-			pruned = append(pruned, receipt)
-		}
-	}
-	*receipts = pruned
-}
 
 var (
 	mnemonic   = os.Getenv("MNEMONIC")
@@ -115,6 +81,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Restore rate-limiting from Firestore
+	_receipts, err := db.GetFundingReceipts()
+	if err != nil {
+		log.Fatal(err)
+	}
+	receipts = *_receipts
+
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + botToken)
 	if err != nil {
@@ -126,7 +99,8 @@ func main() {
 	dg.AddHandler(fh.handleDispense)
 
 	// we only care about receiving message events.
-	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentDirectMessages
+	// dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentDirectMessages
+	dg.Identify.Intents = discordgo.IntentDirectMessages
 
 	// Open a websocket connection to Discord and begin listening.
 	err = dg.Open()
@@ -213,6 +187,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 					return
 				}
 
+				// TODO refactor Prune into FindByChainPrefixAndUsername?
 				maxAge := time.Hour * 12
 				receipts.Prune(maxAge)
 				receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
