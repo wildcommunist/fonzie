@@ -102,7 +102,7 @@ func (receipts *FundingReceipts) Add(newReceipt FundingReceipt) {
 
 func (receipts *FundingReceipts) FindByChainPrefixAndUsername(prefix ChainPrefix, username Username) *FundingReceipt {
 	for _, receipt := range *receipts {
-		log.Info("FindByChainPrefixAndUsername: %v %v", receipt.ChainPrefix, receipt.Username)
+		log.Infof("FindByChainPrefixAndUsername: %v %v", receipt.ChainPrefix, receipt.Username)
 		if receipt.ChainPrefix == prefix && receipt.Username == username {
 			return &receipt
 		}
@@ -135,7 +135,7 @@ func (db Db) SaveFundingReceipts(receipts *FundingReceipts) error {
 	doc := db.Firestore.Doc("funding-receipts/receipts")
 	bytes, err := json.Marshal(receipts)
 	if err != nil {
-		log.Error("marshal error %v", err)
+		log.Errorf("marshal error %v", err)
 		return err
 	}
 	wr, err := doc.Create(ctx, &FundingReceiptsJson{Receipts: string(bytes)})
