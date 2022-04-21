@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	firebase "firebase.google.com/go"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/api/option"
 )
 
 type ChainPrefix = string
@@ -52,32 +52,29 @@ func init() {
 // ProvideFirestore returns a *firestore.Client
 func initFirestore() (*firestore.Client, error) {
 	ctx = context.Background()
-	if os.Getenv("GCP_CREDENTIALS") == "" {
-		// import to file
-		json, err := b64.StdEncoding.DecodeString(os.Getenv("GCP_CREDENTIALS"))
-		if err != nil {
-			log.Fatal(err)
-		}
-		file, err := ioutil.TempFile("dir", "prefix")
-		if err != nil {
-			log.Fatal(err)
-		}
-		message := []byte(json)
-		err = ioutil.WriteFile(file.Name(), message, 0644)
-		if err != nil {
-			log.Fatal(err)
-		}
-		// set env GCP expects to file
-		err = os.Setenv("GOOGLE_APPLICATION_CREDENTIALS", file.Name())
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	var (
+		app  *firebase.App
+		json []byte
+		err  error
+	)
 	conf := &firebase.Config{ProjectID: os.Getenv("GCP_PROJECT")}
-
-	app, err := firebase.NewApp(ctx, conf)
-	if err != nil {
-		return nil, err
+	if os.Getenv("GCP_CREDENTIALS") != "" {
+		// import from env
+		log.Info("Importing GCP credentials from env")
+		json, err = b64.StdEncoding.DecodeString(os.Getenv("GCP_CREDENTIALS"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		app, err = firebase.NewApp(ctx, conf, option.WithCredentialsJSON([]byte(json)))
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		// local dev/application-default case
+		app, err = firebase.NewApp(ctx, conf)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	client, err := app.Firestore(ctx)
