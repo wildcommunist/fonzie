@@ -31,15 +31,17 @@ type CoinsStr = string
 type ChainFunding = map[db.ChainPrefix]CoinsStr
 
 var (
-	mnemonic   = os.Getenv("MNEMONIC")
-	botToken   = os.Getenv("BOT_TOKEN")
-	rawChains  = os.Getenv("CHAINS")
-	rawFunding = os.Getenv("FUNDING")
-	isSilent   = os.Getenv("SILENT") != ""
-	funding    ChainFunding
+	mnemonic           = os.Getenv("MNEMONIC")
+	botToken           = os.Getenv("BOT_TOKEN")
+	rawChains          = os.Getenv("CHAINS")
+	rawFunding         = os.Getenv("FUNDING")
+	rawFundingInterval = os.Getenv("FUNDING_INTERVAL")
+	isSilent           = os.Getenv("SILENT") != ""
+	funding            ChainFunding
+	fundingInterval    time.Duration
 )
 
-func initChains() chain.Chains {
+func init() {
 	if len(os.Args) > 1 && os.Args[1] == "version" {
 		fmt.Println(Version)
 		os.Exit(0)
@@ -54,8 +56,24 @@ func initChains() chain.Chains {
 		log.Fatal("BOT_TOKEN is invalid")
 	}
 	if rawChains == "" {
-		log.Fatal("CHAINS config cannot be blank (json array)")
+		log.Fatal("CHAINS cannot be blank (json array)")
 	}
+	if rawFunding == "" {
+		log.Fatal("FUNDING cannot be blank (json array)")
+	}
+	if rawFundingInterval == "" {
+		fundingInterval = time.Hour * 12
+		log.Info("FUNDING_INTERVAL was not set and is defaulting to 12 hours")
+	} else {
+		var err error
+		fundingInterval, err = time.ParseDuration(rawFundingInterval)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func initChains() chain.Chains {
 	// parse chains config
 	var chains chain.Chains
 	err := json.Unmarshal([]byte(rawChains), &chains)
@@ -185,14 +203,13 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 				}
 
 				// TODO refactor Prune into FindByChainPrefixAndUsername?
-				maxAge := time.Hour * 12
 				receipt, err := fh.db.GetFundingReceiptByUsernameAndChainPrefix(fh.ctx, prefix, m.Author.Username)
 				if err != nil {
 					reportError(s, m, err)
 					return
 				}
-				if receipt != nil && receipt.FundedAt.Add(maxAge).Before(time.Now()) {
-					reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(maxAge)).Round(2*time.Second), prefix))
+				if receipt != nil && receipt.FundedAt.Add(fundingInterval).Before(time.Now()) {
+					reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(fundingInterval)).Round(2*time.Second), prefix))
 					return
 				}
 
