@@ -16,10 +16,13 @@ go build .
 
 ### Environment Variables
 
-* `BOT_TOKEN` -- [Create a Discord token](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token)
-* `MNEMONIC`  -- 12 or 24 word seed string, shared for each chain
-* `CHAINS`    -- A JSON object, keyed by each bech32 prefix, value is a RPC endpoint
-* `FUNDING`   -- Similar to CHAINS, value is how much funding to sip with each tap
+* `BOT_TOKEN`        -- [Create a Discord token](https://github.com/reactiflux/discord-irc/wiki/Creating-a-discord-bot-&-getting-a-token)
+* `MNEMONIC`         -- 12 or 24 word seed string, shared for each chain
+* `CHAINS`           -- A JSON object, keyed by each bech32 prefix, value is a RPC endpoint
+* `FUNDING`          -- Similar to CHAINS, value is how much funding to sip with each tap
+* `FUNDING_INTERVAL` -- Optional; specify funding interval -- e.g. `12h`. Defaults to 12 hours.
+* `GCP_PROJECT`      -- Specify gcp project where firestore is located (for funding persistence)
+* `GCP_CREDENTIALS`  -- json service account credentials encoded in base64 
 
 #### An example configuration supporting Umee, Atom, Juno & Osmosis
 
