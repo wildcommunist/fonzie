@@ -207,6 +207,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 					log.Error(err)
 					return
 				}
+				log.Infof("FETCHED RECEIPT: %#v", receipt)
 				if receipt != nil && receipt.FundedAt.Add(fundingInterval).After(time.Now()) {
 					reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(fundingInterval)).Round(2*time.Second), prefix))
 					return
