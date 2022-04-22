@@ -197,15 +197,14 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 				}
 				coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
 				if err != nil {
-					reportError(s, m, fmt.Errorf("%s chain prefix is not supported, err: %v", prefix, err))
-					log.Error(err)
+					reportError(s, m, err)
 					return
 				}
 
 				// TODO refactor Prune into FindByChainPrefixAndUsername?
 				receipt, err := fh.db.GetFundingReceiptByUsernameAndChainPrefix(fh.ctx, prefix, m.Author.Username)
 				if err != nil {
-					reportError(s, m, err)
+					log.Error(err)
 					return
 				}
 				if receipt != nil && receipt.FundedAt.Add(fundingInterval).Before(time.Now()) {
