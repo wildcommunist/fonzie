@@ -39,12 +39,19 @@ var (
 	isSilent           = os.Getenv("SILENT") != ""
 	funding            ChainFunding
 	fundingInterval    time.Duration
+	pruneMode          = false
 )
 
 func init() {
-	if len(os.Args) > 1 && os.Args[1] == "version" {
-		fmt.Println(Version)
-		os.Exit(0)
+	if len(os.Args) > 1 {
+		if os.Args[1] == "version" {
+			fmt.Println(Version)
+			os.Exit(0)
+		}
+		if os.Args[1] == "prune" {
+			pruneMode = true
+		}
+
 	}
 
 	log.SetFormatter(&log.JSONFormatter{})
@@ -93,6 +100,16 @@ func initChains() chain.Chains {
 func main() {
 	ctx := context.Background()
 	db := db.NewDb(ctx)
+
+	if pruneMode {
+		numPruned, err := db.PruneExpiredReceipts(ctx, time.Now().Add(-fundingInterval))
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Info("pruned %d receipts", numPruned)
+		os.Exit(0)
+	}
+
 	chains := initChains()
 
 	err := chains.ImportMnemonic(ctx, mnemonic)

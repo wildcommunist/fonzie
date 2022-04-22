@@ -13,6 +13,7 @@ import (
 	firebase "firebase.google.com/go"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	log "github.com/sirupsen/logrus"
+	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -90,6 +91,40 @@ func (db Db) SaveFundingReceipt(ctx context.Context, newReceipt FundingReceipt) 
 
 	_, err := ref.Set(ctx, newReceipt)
 	return err
+}
+
+func (db Db) PruneExpiredReceipts(ctx context.Context, beforeFundingTime time.Time) (int, error) {
+	table := db.firestore.Collection("funding-receipts")
+
+	iter := table.Documents(ctx)
+	defer iter.Stop()
+
+	var numPruned int
+	for {
+		doc, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return numPruned, err
+		}
+
+		var receipt FundingReceipt
+		err = doc.DataTo(&receipt)
+		if err != nil {
+			return numPruned, err
+		}
+
+		if receipt.FundedAt.Before(beforeFundingTime) {
+			_, err = doc.Ref.Delete(ctx)
+			if err != nil {
+				return numPruned, err
+			}
+			numPruned += 1
+		}
+	}
+
+	return numPruned, nil
 }
 
 func (db Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, username string, chainPrefix string) (*FundingReceipt, error) {
