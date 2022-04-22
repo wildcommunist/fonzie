@@ -88,7 +88,7 @@ func main() {
 	}
 	defer dg.Close()
 
-	fh := NewFaucetHandler(chains)
+	fh := NewFaucetHandler(chains, db)
 	dg.AddHandler(fh.handleDispense)
 
 	// we only care about receiving message events.
@@ -115,11 +115,13 @@ type FaucetHandler struct {
 	faucets map[string]ChainFaucet
 	quit    chan bool
 	chains  chain.Chains
+	db      Db
+	ctx     context.Context
 
 	cmd *regexp.Regexp
 }
 
-func NewFaucetHandler(chains chain.Chains) FaucetHandler {
+func NewFaucetHandler(chains chain.Chains, db Db) FaucetHandler {
 	re, err := regexp.Compile("!(request|help)(.*)")
 	if err != nil {
 		log.Fatal(err)
@@ -136,6 +138,8 @@ func NewFaucetHandler(chains chain.Chains) FaucetHandler {
 		quit:    quit,
 		chains:  chains,
 		cmd:     re,
+		ctx:     context.Background(),
+		db:      db,
 	}
 }
 
@@ -181,9 +185,12 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 
 				// TODO refactor Prune into FindByChainPrefixAndUsername?
 				maxAge := time.Hour * 12
-				receipts.Prune(maxAge)
-				receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
-				if receipt != nil {
+				receipt, err := fh.db.GetFundingReceiptByUsernameAndChainPrefix(fh.ctx, prefix, m.Author.Username)
+				if err != nil {
+					reportError(s, m, err)
+					return
+				}
+				if receipt != nil && receipt.FundedAt.Add(maxAge).Before(time.Now()) {
 					reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(maxAge)).Round(2*time.Second), prefix))
 					return
 				}
@@ -198,12 +205,15 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 				sendReaction(s, m, "👍")
 				faucet.channel <- FaucetReq{recipient, coins, s, m}
 
-				receipts.Add(FundingReceipt{
+				err = fh.db.SaveFundingReceipt(fh.ctx, FundingReceipt{
 					ChainPrefix: prefix,
 					Username:    m.Author.Username,
 					FundedAt:    time.Now(),
 					Amount:      coins,
 				})
+				if err != nil {
+					log.Error(err)
+				}
 
 			default:
 				help(s, m, fh.chains)
