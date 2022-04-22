@@ -102,10 +102,11 @@ func main() {
 	db := db.NewDb(ctx)
 
 	if pruneMode {
-		err := db.PruneExpiredReceipts(ctx, time.Now().Add(-fundingInterval))
+		numPruned, err := db.PruneExpiredReceipts(ctx, time.Now().Add(-fundingInterval))
 		if err != nil {
 			log.Fatal(err)
 		}
+		log.Info("pruned %d receipts", numPruned)
 		os.Exit(0)
 	}
 

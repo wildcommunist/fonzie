@@ -93,36 +93,38 @@ func (db Db) SaveFundingReceipt(ctx context.Context, newReceipt FundingReceipt) 
 	return err
 }
 
-func (db Db) PruneExpiredReceipts(ctx context.Context, beforeFundingTime time.Time) error {
+func (db Db) PruneExpiredReceipts(ctx context.Context, beforeFundingTime time.Time) (int, error) {
 	table := db.firestore.Collection("funding-receipts")
 
 	iter := table.Documents(ctx)
 	defer iter.Stop()
 
+	var numPruned int
 	for {
 		doc, err := iter.Next()
 		if err == iterator.Done {
 			break
 		}
 		if err != nil {
-			return err
+			return numPruned, err
 		}
 
 		var receipt FundingReceipt
 		err = doc.DataTo(&receipt)
 		if err != nil {
-			return err
+			return numPruned, err
 		}
 
 		if receipt.FundedAt.Before(beforeFundingTime) {
 			_, err = doc.Ref.Delete(ctx)
 			if err != nil {
-				return err
+				return numPruned, err
 			}
+			numPruned += 1
 		}
 	}
 
-	return nil
+	return numPruned, nil
 }
 
 func (db Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, username string, chainPrefix string) (*FundingReceipt, error) {
