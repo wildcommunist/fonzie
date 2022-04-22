@@ -106,11 +106,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-<<<<<<< HEAD
 		log.Infof("pruned %d receipts", numPruned)
-=======
-		log.Info("pruned %d receipts", numPruned)
->>>>>>> 4fc9b59537021754d68fa29f8bc128b52d863644
 		os.Exit(0)
 	}
 
