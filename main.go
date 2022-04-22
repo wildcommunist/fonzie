@@ -253,7 +253,7 @@ func reportError(s *discordgo.Session, m *discordgo.MessageCreate, errToReport e
 		log.Error(err)
 	}
 	// Send errors to channel, even when isSilent
-	_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("<@%s>, there is an error in your request:\n `%s`", m.Author.ID, errToReport))
+	_, err = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("<@%s>, there is an error in your request:\n `%s`", m.Author.ID, errToReport), m.Reference())
 	if err != nil {
 		log.Error(err)
 	}
