@@ -36,7 +36,6 @@ var (
 	rawFunding = os.Getenv("FUNDING")
 	isSilent   = os.Getenv("SILENT") != ""
 	funding    ChainFunding
-	receipts   FundingReceipts
 )
 
 func initChains() chain.Chains {
@@ -81,13 +80,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Restore rate-limiting from Firestore
-	_receipts, err := db.GetFundingReceipts()
-	if err != nil {
-		log.Fatal(err)
-	}
-	receipts = *_receipts
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + botToken)
