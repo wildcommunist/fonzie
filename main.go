@@ -17,7 +17,8 @@ import (
 	"github.com/cosmos/btcutil/bech32"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	log "github.com/sirupsen/logrus"
-	chain "github.com/umee-network/fonzie/chain"
+	"github.com/umee-network/fonzie/chain"
+	"github.com/umee-network/fonzie/db"
 )
 
 //go:generate bash -c "if [ \"$CI\" = true ] ; then echo -n $GITHUB_REF_NAME > VERSION; fi"
@@ -27,19 +28,20 @@ var (
 )
 
 type CoinsStr = string
-type ChainFunding = map[ChainPrefix]CoinsStr
+type ChainFunding = map[db.ChainPrefix]CoinsStr
 
 var (
-	mnemonic   = os.Getenv("MNEMONIC")
-	botToken   = os.Getenv("BOT_TOKEN")
-	rawChains  = os.Getenv("CHAINS")
-	rawFunding = os.Getenv("FUNDING")
-	isSilent   = os.Getenv("SILENT") != ""
-	funding    ChainFunding
-	receipts   FundingReceipts
+	mnemonic           = os.Getenv("MNEMONIC")
+	botToken           = os.Getenv("BOT_TOKEN")
+	rawChains          = os.Getenv("CHAINS")
+	rawFunding         = os.Getenv("FUNDING")
+	rawFundingInterval = os.Getenv("FUNDING_INTERVAL")
+	isSilent           = os.Getenv("SILENT") != ""
+	funding            ChainFunding
+	fundingInterval    time.Duration
 )
 
-func initChains() chain.Chains {
+func init() {
 	if len(os.Args) > 1 && os.Args[1] == "version" {
 		fmt.Println(Version)
 		os.Exit(0)
@@ -54,8 +56,24 @@ func initChains() chain.Chains {
 		log.Fatal("BOT_TOKEN is invalid")
 	}
 	if rawChains == "" {
-		log.Fatal("CHAINS config cannot be blank (json array)")
+		log.Fatal("CHAINS cannot be blank (json array)")
 	}
+	if rawFunding == "" {
+		log.Fatal("FUNDING cannot be blank (json array)")
+	}
+	if rawFundingInterval == "" {
+		fundingInterval = time.Hour * 12
+		log.Info("FUNDING_INTERVAL was not set and is defaulting to 12 hours")
+	} else {
+		var err error
+		fundingInterval, err = time.ParseDuration(rawFundingInterval)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func initChains() chain.Chains {
 	// parse chains config
 	var chains chain.Chains
 	err := json.Unmarshal([]byte(rawChains), &chains)
@@ -73,20 +91,14 @@ func initChains() chain.Chains {
 }
 
 func main() {
+	ctx := context.Background()
+	db := db.NewDb(ctx)
 	chains := initChains()
 
-	ctx := context.Background()
 	err := chains.ImportMnemonic(ctx, mnemonic)
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	// Restore rate-limiting from Firestore
-	_receipts, err := db.GetFundingReceipts()
-	if err != nil {
-		log.Fatal(err)
-	}
-	receipts = *_receipts
 
 	// Create a new Discord session using the provided bot token.
 	dg, err := discordgo.New("Bot " + botToken)
@@ -95,7 +107,7 @@ func main() {
 	}
 	defer dg.Close()
 
-	fh := NewFaucetHandler(chains)
+	fh := NewFaucetHandler(chains, db)
 	dg.AddHandler(fh.handleDispense)
 
 	// we only care about receiving message events.
@@ -122,11 +134,13 @@ type FaucetHandler struct {
 	faucets map[string]ChainFaucet
 	quit    chan bool
 	chains  chain.Chains
+	db      db.Db
+	ctx     context.Context
 
 	cmd *regexp.Regexp
 }
 
-func NewFaucetHandler(chains chain.Chains) FaucetHandler {
+func NewFaucetHandler(chains chain.Chains, db db.Db) FaucetHandler {
 	re, err := regexp.Compile("!(request|help)(.*)")
 	if err != nil {
 		log.Fatal(err)
@@ -143,6 +157,8 @@ func NewFaucetHandler(chains chain.Chains) FaucetHandler {
 		quit:    quit,
 		chains:  chains,
 		cmd:     re,
+		ctx:     context.Background(),
+		db:      db,
 	}
 }
 
@@ -181,17 +197,23 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 				}
 				coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
 				if err != nil {
-					reportError(s, m, fmt.Errorf("%s chain prefix is not supported, err: %v", prefix, err))
-					log.Error(err)
+					reportError(s, m, err)
 					return
 				}
 
 				// TODO refactor Prune into FindByChainPrefixAndUsername?
-				maxAge := time.Hour * 12
-				receipts.Prune(maxAge)
-				receipt := receipts.FindByChainPrefixAndUsername(prefix, m.Author.Username)
+				receipt, err := fh.db.GetFundingReceiptByUsernameAndChainPrefix(fh.ctx, prefix, m.Author.Username)
+				if err != nil {
+					log.Error(err)
+					return
+				}
+
 				if receipt != nil {
-					reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(maxAge)).Round(2*time.Second), prefix))
+					log.Infof("FETCHED RECEIPT RESULT: %#v", receipt.FundedAt.Add(fundingInterval).After(time.Now()))
+				}
+
+				if receipt != nil && receipt.FundedAt.Add(fundingInterval).After(time.Now()) {
+					reportError(s, m, fmt.Errorf("you must wait %v until you can get %s funding again", time.Until(receipt.FundedAt.Add(fundingInterval)).Round(2*time.Second), prefix))
 					return
 				}
 
@@ -205,12 +227,15 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 				sendReaction(s, m, "👍")
 				faucet.channel <- FaucetReq{recipient, coins, s, m}
 
-				receipts.Add(FundingReceipt{
+				err = fh.db.SaveFundingReceipt(fh.ctx, db.FundingReceipt{
 					ChainPrefix: prefix,
 					Username:    m.Author.Username,
 					FundedAt:    time.Now(),
 					Amount:      coins,
 				})
+				if err != nil {
+					log.Error(err)
+				}
 
 			default:
 				help(s, m, fh.chains)
@@ -232,7 +257,7 @@ func reportError(s *discordgo.Session, m *discordgo.MessageCreate, errToReport e
 		log.Error(err)
 	}
 	// Send errors to channel, even when isSilent
-	_, err = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("<@%s>, there is an error in your request:\n `%s`", m.Author.ID, errToReport))
+	_, err = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("<@%s>, there is an error in your request:\n `%s`", m.Author.ID, errToReport), m.Reference())
 	if err != nil {
 		log.Error(err)
 	}

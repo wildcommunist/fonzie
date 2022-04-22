@@ -5,3 +5,6 @@
 
 	2. Help!
 	`!help`
+
+    **Testnet Explorer:**
+	https://explorer.umeemania-1.network.umee.cc
