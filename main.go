@@ -201,8 +201,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 					return
 				}
 
-				// TODO refactor Prune into FindByChainPrefixAndUsername?
-				receipt, err := fh.db.GetFundingReceiptByUsernameAndChainPrefix(fh.ctx, prefix, m.Author.Username)
+				receipt, err := fh.db.GetFundingReceiptByUsernameAndChainPrefix(fh.ctx, m.Author.Username, prefix)
 				if err != nil {
 					log.Error(err)
 					return

@@ -100,6 +100,7 @@ func (db Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, user
 	if status.Code(err) == codes.NotFound {
 		return nil, nil
 	}
+
 	if err != nil {
 		return nil, err
 	}
