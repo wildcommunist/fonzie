@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"time"
 
@@ -13,45 +12,38 @@ import (
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/api/option"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ChainPrefix = string
 type Username = string
 type FundingReceipt struct {
-	ChainPrefix ChainPrefix
-	Username    Username
-	FundedAt    time.Time
-	Amount      cosmostypes.Coins
+	ChainPrefix ChainPrefix       `firestore:"chainPrefix"`
+	Username    Username          `firestore:"username"`
+	FundedAt    time.Time         `firestore:"fundedAt"`
+	Amount      cosmostypes.Coins `firestore:"amount"`
 }
 type FundingReceipts []FundingReceipt
-type FundingReceiptsJson struct {
-	Receipts string `json:"receipts" firestore:"receipts"`
-}
 
 // Db represents the application interface for accessing the database
 type Db struct {
-	Firestore *firestore.Client
+	firestore *firestore.Client
 }
 
-var (
-	db  *Db
-	ctx context.Context
-)
-
-func init() {
+func NewDb(ctx context.Context) Db {
 	// Initialize Firestore
-	client, err := initFirestore()
+	client, err := initFirestore(ctx)
 	if err != nil {
 		log.Fatal(err)
 	}
-	db = &Db{
-		Firestore: client,
+	return Db{
+		firestore: client,
 	}
 }
 
 // ProvideFirestore returns a *firestore.Client
-func initFirestore() (*firestore.Client, error) {
-	ctx = context.Background()
+func initFirestore(ctx context.Context) (*firestore.Client, error) {
 	var (
 		app  *firebase.App
 		json []byte
@@ -90,25 +82,36 @@ func initFirestore() (*firestore.Client, error) {
 	return client, nil
 }
 
-func (receipts *FundingReceipts) Add(newReceipt FundingReceipt) {
-	*receipts = append(*receipts, newReceipt)
-	// save to db
-	err := db.SaveFundingReceipts(receipts)
+func (db Db) SaveFundingReceipt(ctx context.Context, newReceipt FundingReceipt) error {
+	table := db.firestore.Collection("funding-receipts")
+	ref := table.Doc(newReceipt.Username + "." + newReceipt.ChainPrefix)
+
+	_, err := ref.Set(ctx, newReceipt)
+	return err
+}
+
+func (db Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, username string, chainPrefix string) (*FundingReceipt, error) {
+	table := db.firestore.Collection("funding-receipts")
+	ref := table.Doc(username + "." + chainPrefix)
+
+	doc, err := ref.Get(ctx)
+	if status.Code(err) == codes.NotFound {
+		return nil, nil
+	}
 	if err != nil {
-		// GCP will restart pod
-		log.Fatal(err)
+		return nil, err
 	}
+
+	var out FundingReceipt
+	err = doc.DataTo(&out)
+	if err != nil {
+		return nil, err
+	}
+
+	return &out, nil
 }
 
-func (receipts *FundingReceipts) FindByChainPrefixAndUsername(prefix ChainPrefix, username Username) *FundingReceipt {
-	for _, receipt := range *receipts {
-		if receipt.ChainPrefix == prefix && receipt.Username == username {
-			return &receipt
-		}
-	}
-	return nil
-}
-
+/*
 func (receipts *FundingReceipts) Prune(maxAge time.Duration) {
 	pruned := FundingReceipts{}
 	now := time.Now()
@@ -125,44 +128,26 @@ func (receipts *FundingReceipts) Prune(maxAge time.Duration) {
 		log.Fatal(err)
 	}
 }
+*/
 
-func (db Db) RunTransaction(ctx context.Context, runner func(ctx context.Context, tx *firestore.Transaction) error) error {
-	return db.Firestore.RunTransaction(ctx, runner)
-}
-
-func (db Db) SaveFundingReceipts(receipts *FundingReceipts) error {
-	return nil
-	doc := db.Firestore.Doc("funding-receipts/receipts")
-	bytes, err := json.Marshal(receipts)
-	if err != nil {
-		log.Errorf("marshal error %v", err)
-		return err
-	}
-	wr, err := doc.Create(ctx, &FundingReceiptsJson{Receipts: string(bytes)})
-	if err != nil {
-		// Attempt to update the document
-		wr, err = doc.Update(ctx, []firestore.Update{{Path: "Receipts", Value: string(bytes)}})
-		if err != nil {
-			return err
-		}
-	}
-	log.Infof("Saved funding receipts: %v", wr)
-	return nil
-}
-
-func (db Db) GetFundingReceipts() (*FundingReceipts, error) {
-	return &FundingReceipts{}, nil
-	receipts := &FundingReceipts{}
-	doc := db.Firestore.Doc("funding-receipts/receipts")
-	snap, err := doc.Get(ctx)
+func (db Db) GetFundingReceipts(ctx context.Context) (FundingReceipts, error) {
+	table := db.firestore.Collection("funding-receipts")
+	docs, err := table.Documents(ctx).GetAll()
 	if err != nil {
 		return nil, err
 	}
-	var myReceipts FundingReceiptsJson
-	if err := snap.DataTo(&myReceipts); err != nil {
-		log.Info(err)
+
+	var out FundingReceipts
+	for _, snap := range docs {
+		var receipt FundingReceipt
+
+		err := snap.DataTo(&receipt)
+		if err != nil {
+			return nil, err
+		}
+
+		out = append(out, receipt)
 	}
-	json.Unmarshal([]byte(myReceipts.Receipts), &receipts)
-	log.Infof("Got funding receipts: %v", myReceipts.Receipts)
-	return receipts, nil
+
+	return out, nil
 }

@@ -73,9 +73,10 @@ func initChains() chain.Chains {
 }
 
 func main() {
+	ctx := context.Background()
+	db := NewDb(ctx)
 	chains := initChains()
 
-	ctx := context.Background()
 	err := chains.ImportMnemonic(ctx, mnemonic)
 	if err != nil {
 		log.Fatal(err)
