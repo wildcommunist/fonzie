@@ -17,7 +17,8 @@ import (
 	"github.com/cosmos/btcutil/bech32"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	log "github.com/sirupsen/logrus"
-	chain "github.com/umee-network/fonzie/chain"
+	"github.com/umee-network/fonzie/chain"
+	"github.com/umee-network/fonzie/db"
 )
 
 //go:generate bash -c "if [ \"$CI\" = true ] ; then echo -n $GITHUB_REF_NAME > VERSION; fi"
@@ -27,7 +28,7 @@ var (
 )
 
 type CoinsStr = string
-type ChainFunding = map[ChainPrefix]CoinsStr
+type ChainFunding = map[db.ChainPrefix]CoinsStr
 
 var (
 	mnemonic   = os.Getenv("MNEMONIC")
@@ -73,7 +74,7 @@ func initChains() chain.Chains {
 
 func main() {
 	ctx := context.Background()
-	db := NewDb(ctx)
+	db := db.NewDb(ctx)
 	chains := initChains()
 
 	err := chains.ImportMnemonic(ctx, mnemonic)
@@ -115,13 +116,13 @@ type FaucetHandler struct {
 	faucets map[string]ChainFaucet
 	quit    chan bool
 	chains  chain.Chains
-	db      Db
+	db      db.Db
 	ctx     context.Context
 
 	cmd *regexp.Regexp
 }
 
-func NewFaucetHandler(chains chain.Chains, db Db) FaucetHandler {
+func NewFaucetHandler(chains chain.Chains, db db.Db) FaucetHandler {
 	re, err := regexp.Compile("!(request|help)(.*)")
 	if err != nil {
 		log.Fatal(err)
@@ -205,7 +206,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 				sendReaction(s, m, "👍")
 				faucet.channel <- FaucetReq{recipient, coins, s, m}
 
-				err = fh.db.SaveFundingReceipt(fh.ctx, FundingReceipt{
+				err = fh.db.SaveFundingReceipt(fh.ctx, db.FundingReceipt{
 					ChainPrefix: prefix,
 					Username:    m.Author.Username,
 					FundedAt:    time.Now(),
