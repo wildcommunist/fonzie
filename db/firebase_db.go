@@ -2,10 +2,12 @@ package db
 
 import (
 	"context"
+	"crypto/md5"
 	"os"
 	"time"
 
 	b64 "encoding/base64"
+	"encoding/hex"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
@@ -84,7 +86,7 @@ func initFirestore(ctx context.Context) (*firestore.Client, error) {
 
 func (db Db) SaveFundingReceipt(ctx context.Context, newReceipt FundingReceipt) error {
 	table := db.firestore.Collection("funding-receipts")
-	ref := table.Doc(newReceipt.Username + "." + newReceipt.ChainPrefix)
+	ref := table.Doc(mkPKEY(newReceipt.Username, newReceipt.ChainPrefix))
 
 	_, err := ref.Set(ctx, newReceipt)
 	return err
@@ -92,7 +94,7 @@ func (db Db) SaveFundingReceipt(ctx context.Context, newReceipt FundingReceipt) 
 
 func (db Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, username string, chainPrefix string) (*FundingReceipt, error) {
 	table := db.firestore.Collection("funding-receipts")
-	ref := table.Doc(username + "." + chainPrefix)
+	ref := table.Doc(mkPKEY(username, chainPrefix))
 
 	doc, err := ref.Get(ctx)
 	if status.Code(err) == codes.NotFound {
@@ -109,4 +111,13 @@ func (db Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, user
 	}
 
 	return &out, nil
+}
+
+func mkPKEY(username string, chainPrefix string) string {
+	return getMD5Hash(username + chainPrefix)
+}
+
+func getMD5Hash(text string) string {
+	hash := md5.Sum([]byte(text))
+	return hex.EncodeToString(hash[:])
 }
