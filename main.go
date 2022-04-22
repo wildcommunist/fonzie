@@ -106,7 +106,7 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Info("pruned %d receipts", numPruned)
+		log.Infof("pruned %d receipts", numPruned)
 		os.Exit(0)
 	}
 
