@@ -293,8 +293,13 @@ func help(s *discordgo.Session, m *discordgo.MessageCreate, chains chain.Chains)
 	}
 }
 
+func isDM(m *discordgo.MessageCreate) bool {
+	return m.GuildID == ""
+}
+
 func sendMessage(s *discordgo.Session, m *discordgo.MessageCreate, msg string) error {
-	if isSilent || m.Author.Bot {
+	if m.Author.Bot || isSilent && !isDM(m) {
+		// Silent mode is enabled, so-- only reply to DMs
 		return nil
 	}
 	directMessageChannel, err := s.UserChannelCreate(m.Author.ID)
