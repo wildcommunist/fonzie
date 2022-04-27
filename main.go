@@ -218,7 +218,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 					return
 				}
 
-				receipt, err := fh.db.GetFundingReceiptByUsernameAndChainPrefix(fh.ctx, m.Author.Username, prefix)
+				receipt, err := fh.db.GetFundingReceiptByUsernameAndChainPrefix(fh.ctx, m.Author.ID, prefix)
 				if err != nil {
 					log.Error(err)
 					return
@@ -245,7 +245,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 
 				err = fh.db.SaveFundingReceipt(fh.ctx, db.FundingReceipt{
 					ChainPrefix: prefix,
-					Username:    m.Author.Username,
+					Username:    m.Author.ID,
 					FundedAt:    time.Now(),
 					Amount:      coins,
 				})
