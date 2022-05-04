@@ -34,13 +34,18 @@ func (chains Chains) FindByPrefix(prefix string) *Chain {
 }
 
 type Chain struct {
-	Prefix string            `json:"prefix"`
-	RPC    string            `json:"rpc"`
-	client *lens.ChainClient `json:"-"`
+	Prefix   string            `json:"prefix"`
+	RPC      string            `json:"rpc"`
+	CoinType uint32            `json:"coin_type"`
+	client   *lens.ChainClient `json:"-"`
 }
 
 func (chain *Chain) getClient() *lens.ChainClient {
 	if chain.client == nil {
+		if chain.CoinType == 0 {
+			// default to cosmos
+			chain.CoinType = 118
+		}
 		chainID, err := getChainID(chain.RPC)
 		if err != nil {
 			log.Fatalf("failed to get chain id for %s. err: %v", chain.Prefix, err)
@@ -53,9 +58,9 @@ func (chain *Chain) getClient() *lens.ChainClient {
 			RPCAddr:        chain.RPC,
 			AccountPrefix:  chain.Prefix,
 			KeyringBackend: "memory",
-			GasAdjustment:  1.2,
+			GasAdjustment:  1.5,
 			Debug:          true,
-			Timeout:        "20s",
+			Timeout:        "5s",
 			OutputFormat:   "json",
 			SignModeStr:    "direct",
 			Modules:        lens.ModuleBasics,
@@ -74,11 +79,10 @@ func (chain *Chain) getClient() *lens.ChainClient {
 }
 
 func (chain *Chain) ImportMnemonic(mnemonic string) error {
-	_, err := chain.getClient().RestoreKey("anon", mnemonic)
+	_, err := chain.getClient().KeyAddOrRestore("anon", chain.CoinType, mnemonic)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -101,7 +105,7 @@ func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostype
 			return err
 		}
 		log.Infof("Multi sending %s from faucet address [%s] to recipient [%s]",
-			coins[i], faucetAddrStr, toAddr[i])
+			coins[i], faucetAddrStr, recipient)
 		inputs = append(inputs, banktypes.Input{Address: faucetAddrStr, Coins: coins[i]})
 		outputs = append(outputs, banktypes.Output{Address: recipient, Coins: coins[i]})
 	}
