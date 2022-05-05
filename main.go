@@ -62,7 +62,13 @@ func init() {
 
 	}
 
-	log.SetFormatter(&log.JSONFormatter{})
+	if os.Getenv("ENABLE_JSON_LOGGING") == "true" || os.Getenv("ENABLE_JSON_LOGGING") == "1" {
+		log.SetFormatter(&log.JSONFormatter{
+			DisableHTMLEscape: true,
+		})
+	} else {
+		log.SetFormatter(&log.TextFormatter{})
+	}
 
 	if mnemonic == "" {
 		log.Fatal("MNEMONIC is invalid")

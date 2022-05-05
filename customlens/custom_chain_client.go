@@ -38,7 +38,7 @@ func (cc *CustomChainClient) SendMsgs(ctx context.Context, msgs []sdk.Msg, fees 
 
 	// Set the fees, if they exist
 	if fees != "" {
-		txf.WithFees(fees)
+		txf = txf.WithFees(fees)
 	}
 
 	// Build the transaction builder

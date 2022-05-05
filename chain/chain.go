@@ -115,7 +115,7 @@ func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostype
 		Outputs: outputs,
 	}
 
-	return chain.sendMsg(req, c)
+	return chain.sendMsg(req, fees[0], c)
 }
 
 func (chain Chain) DecodeAddr(a string) (cosmostypes.AccAddress, error) {
@@ -123,7 +123,7 @@ func (chain Chain) DecodeAddr(a string) (cosmostypes.AccAddress, error) {
 	return c.DecodeBech32AccAddr(a)
 }
 
-func (chain Chain) Send(toAddr string, coins cosmostypes.Coins) error {
+func (chain Chain) Send(toAddr string, coins cosmostypes.Coins, fees cosmostypes.Coins) error {
 	c := chain.getClient()
 	faucetRawAddr, err := c.GetKeyAddress()
 	if err != nil {
@@ -141,11 +141,11 @@ func (chain Chain) Send(toAddr string, coins cosmostypes.Coins) error {
 		Amount:      coins,
 	}
 
-	return chain.sendMsg(req, c)
+	return chain.sendMsg(req, fees, c)
 }
 
-func (chain Chain) sendMsg(msg cosmostypes.Msg, c *customlens.CustomChainClient) error {
-	res, err := c.SendMsg(context.Background(), msg, "")
+func (chain Chain) sendMsg(msg cosmostypes.Msg, fees cosmostypes.Coins, c *customlens.CustomChainClient) error {
+	res, err := c.SendMsg(context.Background(), msg, fees.String())
 	if err != nil {
 		return err
 	}
