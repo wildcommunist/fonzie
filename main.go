@@ -28,7 +28,12 @@ var (
 )
 
 type CoinsStr = string
-type ChainFunding = map[db.ChainPrefix]CoinsStr
+type FeesStr = string
+type ChainFundingInfo struct {
+	Coins CoinsStr `json:"coins"`
+	Fees  FeesStr  `json:"fees"`
+}
+type ChainFunding = map[db.ChainPrefix]ChainFundingInfo
 
 var (
 	mnemonic           = os.Getenv("MNEMONIC")

@@ -9,7 +9,7 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	resty "github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
-	lens "github.com/strangelove-ventures/lens/client"
+	lens "github.com/umee-network/lens/client"
 )
 
 type Chains []*Chain
