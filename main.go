@@ -18,6 +18,7 @@ import (
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	log "github.com/sirupsen/logrus"
 	"github.com/umee-network/fonzie/chain"
+	"github.com/umee-network/fonzie/customlens"
 	"github.com/umee-network/fonzie/db"
 )
 
@@ -48,6 +49,8 @@ var (
 )
 
 func init() {
+	foo := customlens.CustomChainClient{}
+	log.Println(foo)
 	if len(os.Args) > 1 {
 		if os.Args[1] == "version" {
 			fmt.Println(Version)
@@ -218,7 +221,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 					reportError(s, m, fmt.Errorf("%s chain prefix is not supported", prefix))
 					return
 				}
-				coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix])
+				coins, err := cosmostypes.ParseCoinsNormalized(funding[prefix].Coins)
 				if err != nil {
 					reportError(s, m, err)
 					return

@@ -9,7 +9,8 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	resty "github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
-	lens "github.com/umee-network/lens/client"
+	lens "github.com/strangelove-ventures/lens/client"
+	"github.com/umee-network/fonzie/customlens"
 )
 
 type Chains []*Chain
@@ -34,13 +35,13 @@ func (chains Chains) FindByPrefix(prefix string) *Chain {
 }
 
 type Chain struct {
-	Prefix   string            `json:"prefix"`
-	RPC      string            `json:"rpc"`
-	CoinType uint32            `json:"coin_type"`
-	client   *lens.ChainClient `json:"-"`
+	Prefix   string                        `json:"prefix"`
+	RPC      string                        `json:"rpc"`
+	CoinType uint32                        `json:"coin_type"`
+	client   *customlens.CustomChainClient `json:"-"`
 }
 
-func (chain *Chain) getClient() *lens.ChainClient {
+func (chain *Chain) getClient() *customlens.CustomChainClient {
 	if chain.client == nil {
 		if chain.CoinType == 0 {
 			// default to cosmos
@@ -73,7 +74,7 @@ func (chain *Chain) getClient() *lens.ChainClient {
 			log.Fatal(err)
 		}
 
-		chain.client = c
+		chain.client = &customlens.CustomChainClient{ChainClient: c}
 	}
 	return chain.client
 }
@@ -143,7 +144,7 @@ func (chain Chain) Send(toAddr string, coins cosmostypes.Coins) error {
 	return chain.sendMsg(req, c)
 }
 
-func (chain Chain) sendMsg(msg cosmostypes.Msg, c *lens.ChainClient) error {
+func (chain Chain) sendMsg(msg cosmostypes.Msg, c *customlens.CustomChainClient) error {
 	res, err := c.SendMsg(context.Background(), msg)
 	if err != nil {
 		return err
