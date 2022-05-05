@@ -14,12 +14,12 @@ type CustomChainClient struct {
 }
 
 // SendMsg yeet
-func (cc *CustomChainClient) SendMsg(ctx context.Context, msg sdk.Msg) (*sdk.TxResponse, error) {
-	return cc.SendMsgs(ctx, []sdk.Msg{msg})
+func (cc *CustomChainClient) SendMsg(ctx context.Context, msg sdk.Msg, fees string) (*sdk.TxResponse, error) {
+	return cc.SendMsgs(ctx, []sdk.Msg{msg}, fees)
 }
 
 // SendMsgs yeet
-func (cc *CustomChainClient) SendMsgs(ctx context.Context, msgs []sdk.Msg) (*sdk.TxResponse, error) {
+func (cc *CustomChainClient) SendMsgs(ctx context.Context, msgs []sdk.Msg, fees string) (*sdk.TxResponse, error) {
 	txf, err := cc.PrepareFactory(cc.TxFactory())
 	if err != nil {
 		return nil, err
@@ -35,6 +35,11 @@ func (cc *CustomChainClient) SendMsgs(ctx context.Context, msgs []sdk.Msg) (*sdk
 
 	// Set the gas amount on the transaction factory
 	txf = txf.WithGas(adjusted)
+
+	// Set the fees, if they exist
+	if fees != "" {
+		txf.WithFees(fees)
+	}
 
 	// Build the transaction builder
 	txb, err := tx.BuildUnsignedTx(txf, msgs...)

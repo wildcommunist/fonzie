@@ -87,7 +87,7 @@ func (chain *Chain) ImportMnemonic(mnemonic string) error {
 	return nil
 }
 
-func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostypes.Coins) error {
+func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostypes.Coins, fees []cosmostypes.Coins) error {
 	c := chain.getClient()
 	faucetRawAddr, err := c.GetKeyAddress()
 	if err != nil {
@@ -145,7 +145,7 @@ func (chain Chain) Send(toAddr string, coins cosmostypes.Coins) error {
 }
 
 func (chain Chain) sendMsg(msg cosmostypes.Msg, c *customlens.CustomChainClient) error {
-	res, err := c.SendMsg(context.Background(), msg)
+	res, err := c.SendMsg(context.Background(), msg, "")
 	if err != nil {
 		return err
 	}

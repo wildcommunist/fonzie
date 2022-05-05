@@ -21,6 +21,7 @@ import (
 type FaucetReq struct {
 	Recipient types.AccAddress
 	Coins     types.Coins
+	Fees      types.Coins
 	session   *discordgo.Session
 	msg       *discordgo.MessageCreate
 }
@@ -69,11 +70,13 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 func (cf ChainFaucet) processRequests(rs []FaucetReq) {
 	var toAddrss = make([]types.AccAddress, 0, len(rs))
 	var coins = make([]types.Coins, 0, len(rs))
+	var fees = make([]types.Coins, 0, len(rs))
 	for _, r := range rs {
 		toAddrss = append(toAddrss, r.Recipient)
 		coins = append(coins, r.Coins)
+		fees = append(fees, r.Fees)
 	}
-	err := cf.chain.MultiSend(toAddrss, coins)
+	err := cf.chain.MultiSend(toAddrss, coins, fees)
 	if err != nil {
 		for _, r := range rs {
 			reportError(r.session, r.msg, err)

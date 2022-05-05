@@ -226,6 +226,11 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 					reportError(s, m, err)
 					return
 				}
+				fees, err := cosmostypes.ParseCoinsNormalized(funding[prefix].Fees)
+				if err != nil {
+					reportError(s, m, err)
+					return
+				}
 
 				receipt, err := fh.db.GetFundingReceiptByUsernameAndChainPrefix(fh.ctx, m.Author.ID, prefix)
 				if err != nil {
@@ -250,7 +255,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 
 				// Immediately respond to Discord
 				sendReaction(s, m, "👍")
-				faucet.channel <- FaucetReq{recipient, coins, s, m}
+				faucet.channel <- FaucetReq{recipient, coins, fees, s, m}
 
 				err = fh.db.SaveFundingReceipt(fh.ctx, db.FundingReceipt{
 					ChainPrefix: prefix,
