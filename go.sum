@@ -94,6 +94,8 @@ github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3
 github.com/DataDog/zstd v1.4.1/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
 github.com/DataDog/zstd v1.4.5 h1:EndNeuB0l9syBZhut0wns3gV1hL8zX8LIu6ZiVHWLIQ=
 github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
+github.com/Entrio/subenv v0.0.0-20210211031353-9ddad865e314 h1:oQ4dKEFO+vN0z+mrrA34jev7+o57tpOP6eaB8mtFhS4=
+github.com/Entrio/subenv v0.0.0-20210211031353-9ddad865e314/go.mod h1:7Lf80DK2EOkXzCSwxI7bR/dztOVPc+FROrOMMO4GEhE=
 github.com/HdrHistogram/hdrhistogram-go v1.1.0/go.mod h1:yDgFjdqOqDEKOvasDdhWNXYg9BVp4O+o5f6V/ehm6Oo=
 github.com/HdrHistogram/hdrhistogram-go v1.1.2/go.mod h1:yDgFjdqOqDEKOvasDdhWNXYg9BVp4O+o5f6V/ehm6Oo=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
@@ -236,8 +238,8 @@ github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f/go.mod h1:E3G3o1h8I7cfc
 github.com/cosmos/btcutil v1.0.4 h1:n7C2ngKXo7UC9gNyMNLbzqz7Asuf+7Qv4gnX/rOdQ44=
 github.com/cosmos/btcutil v1.0.4/go.mod h1:Ffqc8Hn6TJUdDgHBwIZLtrLQC1KdJ9jGJl/TvgUaxbU=
 github.com/cosmos/cosmos-sdk v0.44.5/go.mod h1:maUA6m2TBxOJZkbwl0eRtEBgTX37kcaiOWU5t1HEGaY=
-github.com/cosmos/cosmos-sdk v0.45.4 h1:eStDAhJdMY8n5arbBRe+OwpNeBSunxSBHp1g55ulfdA=
-github.com/cosmos/cosmos-sdk v0.45.4/go.mod h1:WOqtDxN3eCCmnYLVla10xG7lEXkFjpTaqm2a2WasgCc=
+github.com/cosmos/cosmos-sdk v0.45.5 h1:GVrZM+lss6y626Pq6loxh/3KLRgK/J6/alTkcKkYmGU=
+github.com/cosmos/cosmos-sdk v0.45.5/go.mod h1:WOqtDxN3eCCmnYLVla10xG7lEXkFjpTaqm2a2WasgCc=
 github.com/cosmos/go-bip39 v0.0.0-20180819234021-555e2067c45d/go.mod h1:tSxLoYXyBmiFeKpvmq4dzayMdCjCnu8uqmCysIGBT2Y=
 github.com/cosmos/go-bip39 v1.0.0 h1:pcomnQdrdH22njcAatO0yWojsUnCO3y2tNoV1cb6hHY=
 github.com/cosmos/go-bip39 v1.0.0/go.mod h1:RNJv0H/pOIVgxw6KS7QeX2a0Uo0aKUlfhZ4xuwvCdJw=

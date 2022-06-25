@@ -7,7 +7,7 @@ import (
 
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
-	resty "github.com/go-resty/resty/v2"
+	"github.com/go-resty/resty/v2"
 	log "github.com/sirupsen/logrus"
 	lens "github.com/strangelove-ventures/lens/client"
 	"github.com/umee-network/fonzie/customlens"
@@ -41,7 +41,12 @@ type Chain struct {
 	client   *customlens.CustomChainClient `json:"-"`
 }
 
-func (chain *Chain) getClient() *customlens.CustomChainClient {
+type TxResponse struct {
+	Height string `json:"height"`
+	Hash   string `json:"txhash"`
+}
+
+func (chain *Chain) GetClient() *customlens.CustomChainClient {
 	if chain.client == nil {
 		if chain.CoinType == 0 {
 			// default to cosmos
@@ -80,22 +85,22 @@ func (chain *Chain) getClient() *customlens.CustomChainClient {
 }
 
 func (chain *Chain) ImportMnemonic(mnemonic string) error {
-	_, err := chain.getClient().KeyAddOrRestore("anon", chain.CoinType, mnemonic)
+	_, err := chain.GetClient().KeyAddOrRestore("anon", chain.CoinType, mnemonic)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostypes.Coins, fees cosmostypes.Coins) error {
-	c := chain.getClient()
+func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostypes.Coins, fees cosmostypes.Coins) (error, string) {
+	c := chain.GetClient()
 	faucetRawAddr, err := c.GetKeyAddress()
 	if err != nil {
-		return err
+		return err, ""
 	}
 	faucetAddrStr, err := c.EncodeBech32AccAddr(faucetRawAddr)
 	if err != nil {
-		return err
+		return err, ""
 	}
 
 	var inputs []banktypes.Input
@@ -103,7 +108,7 @@ func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostype
 	for i := range toAddr {
 		recipient, err := c.EncodeBech32AccAddr(toAddr[i])
 		if err != nil {
-			return err
+			return err, ""
 		}
 		log.Infof("Multi sending %s from faucet address [%s] to recipient [%s]",
 			coins[i], faucetAddrStr, recipient)
@@ -119,19 +124,19 @@ func (chain Chain) MultiSend(toAddr []cosmostypes.AccAddress, coins []cosmostype
 }
 
 func (chain Chain) DecodeAddr(a string) (cosmostypes.AccAddress, error) {
-	c := chain.getClient()
+	c := chain.GetClient()
 	return c.DecodeBech32AccAddr(a)
 }
 
-func (chain Chain) Send(toAddr string, coins cosmostypes.Coins, fees cosmostypes.Coins) error {
-	c := chain.getClient()
+func (chain Chain) Send(toAddr string, coins cosmostypes.Coins, fees cosmostypes.Coins) (error, string) {
+	c := chain.GetClient()
 	faucetRawAddr, err := c.GetKeyAddress()
 	if err != nil {
-		return err
+		return err, ""
 	}
 	faucetAddr, err := c.EncodeBech32AccAddr(faucetRawAddr)
 	if err != nil {
-		return err
+		return err, ""
 	}
 
 	log.Infof("Sending %s from faucet address [%s] to recipient [%s]", coins, faucetAddr, toAddr)
@@ -144,13 +149,15 @@ func (chain Chain) Send(toAddr string, coins cosmostypes.Coins, fees cosmostypes
 	return chain.sendMsg(req, fees, c)
 }
 
-func (chain Chain) sendMsg(msg cosmostypes.Msg, fees cosmostypes.Coins, c *customlens.CustomChainClient) error {
+func (chain Chain) sendMsg(msg cosmostypes.Msg, fees cosmostypes.Coins, c *customlens.CustomChainClient) (error, string) {
 	res, err := c.SendMsg(context.Background(), msg, fees.String())
 	if err != nil {
-		return err
+		return err, ""
 	}
 	fmt.Println(c.PrintTxResponse(res))
-	return nil
+
+	//TODO: Return tx hash
+	return nil, res.TxHash
 }
 
 func getChainID(rpcUrl string) (string, error) {
@@ -176,14 +183,3 @@ func getChainID(rpcUrl string) (string, error) {
 	chainID := header.(map[string]interface{})["chain_id"].(string)
 	return chainID, nil
 }
-
-/*
-"result": {
-	"signed_header": {
-	  "header": {
-	    "version": {
-	      "block": "11"
-	    },
-	    "chain_id": "umee-1",
-	    "height": "731426",
-*/

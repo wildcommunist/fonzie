@@ -21,8 +21,6 @@ go build .
 * `CHAINS`           -- A JSON object, keyed by each bech32 prefix, value is a RPC endpoint
 * `FUNDING`          -- Similar to CHAINS, value is how much funding to sip with each tap
 * `FUNDING_INTERVAL` -- Optional; specify funding interval -- e.g. `12h`. Defaults to 12 hours.
-* `GCP_PROJECT`      -- Specify gcp project where firestore is located (for funding persistence)
-* `GCP_CREDENTIALS`  -- json service account credentials encoded in base64 
 * `SILENT`           -- if set to a non-empty string omit all responses except error notifications
 
 #### An example configuration supporting Umee, Atom, Juno & Osmosis

@@ -3,7 +3,9 @@ package db
 import (
 	"context"
 	"crypto/md5"
+	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	b64 "encoding/base64"
@@ -13,10 +15,7 @@ import (
 	firebase "firebase.google.com/go"
 	cosmostypes "github.com/cosmos/cosmos-sdk/types"
 	log "github.com/sirupsen/logrus"
-	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type ChainPrefix = string
@@ -31,17 +30,16 @@ type FundingReceipts []FundingReceipt
 
 // Db represents the application interface for accessing the database
 type Db struct {
-	firestore *firestore.Client
+	ctx      context.Context
+	receipts FundingReceipts
+	rw       sync.RWMutex
 }
 
-func NewDb(ctx context.Context) Db {
-	// Initialize Firestore
-	client, err := initFirestore(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return Db{
-		firestore: client,
+func NewDb(ctx context.Context) *Db {
+
+	return &Db{
+		ctx:      ctx,
+		receipts: FundingReceipts{},
 	}
 }
 
@@ -52,7 +50,10 @@ func initFirestore(ctx context.Context) (*firestore.Client, error) {
 		json []byte
 		err  error
 	)
-	conf := &firebase.Config{ProjectID: os.Getenv("GCP_PROJECT")}
+	conf := &firebase.Config{
+		ProjectID:   os.Getenv("GCP_PROJECT"),
+		DatabaseURL: os.Getenv("GCP_URL"),
+	}
 	if os.Getenv("GCP_CREDENTIALS") != "" {
 		// import from env
 		log.Info("Importing GCP credentials from env")
@@ -66,7 +67,7 @@ func initFirestore(ctx context.Context) (*firestore.Client, error) {
 		}
 	} else {
 		// local dev/application-default case
-		app, err = firebase.NewApp(ctx, conf)
+		app, err = firebase.NewApp(ctx, conf, option.WithoutAuthentication())
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -85,67 +86,49 @@ func initFirestore(ctx context.Context) (*firestore.Client, error) {
 	return client, nil
 }
 
-func (db Db) SaveFundingReceipt(ctx context.Context, newReceipt FundingReceipt) error {
-	table := db.firestore.Collection("funding-receipts")
-	ref := table.Doc(mkPKEY(newReceipt.Username, newReceipt.ChainPrefix))
+func (db *Db) SaveFundingReceipt(ctx context.Context, newReceipt FundingReceipt) error {
+	// Safe receipt with timestamp etc
 
-	_, err := ref.Set(ctx, newReceipt)
-	return err
+	db.rw.Lock()
+	defer db.rw.Unlock()
+	db.receipts = append(db.receipts, newReceipt)
+	log.Infof("SAVED RECEIPT: %s %s(), %s", newReceipt.Username, newReceipt.ChainPrefix, newReceipt.FundedAt)
+	fmt.Println(db.receipts)
+
+	return nil
 }
 
-func (db Db) PruneExpiredReceipts(ctx context.Context, beforeFundingTime time.Time) (int, error) {
-	table := db.firestore.Collection("funding-receipts")
+func (db *Db) PruneExpiredReceipts(ctx context.Context, beforeFundingTime time.Time) (int, error) {
 
-	iter := table.Documents(ctx)
-	defer iter.Stop()
-
-	var numPruned int
-	for {
-		doc, err := iter.Next()
-		if err == iterator.Done {
-			break
-		}
-		if err != nil {
-			return numPruned, err
-		}
-
-		var receipt FundingReceipt
-		err = doc.DataTo(&receipt)
-		if err != nil {
-			return numPruned, err
-		}
-
-		if receipt.FundedAt.Before(beforeFundingTime) {
-			_, err = doc.Ref.Delete(ctx)
-			if err != nil {
-				return numPruned, err
-			}
-			numPruned += 1
+	db.rw.Lock()
+	defer db.rw.Unlock()
+	for k, v := range db.receipts {
+		if v.FundedAt.Before(beforeFundingTime) {
+			db.receipts = append(db.receipts[:k], db.receipts[k+1:]...)
 		}
 	}
 
-	return numPruned, nil
+	// Delete stale receipts
+	return 0, nil
 }
 
-func (db Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, username string, chainPrefix string) (*FundingReceipt, error) {
-	table := db.firestore.Collection("funding-receipts")
-	ref := table.Doc(mkPKEY(username, chainPrefix))
+func (db *Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, username string, chainPrefix string) (*FundingReceipt, error) {
+	// Get the receipts
 
-	doc, err := ref.Get(ctx)
-	if status.Code(err) == codes.NotFound {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
+	db.rw.RLock()
+	defer db.rw.RUnlock()
 
-	var out FundingReceipt
-	err = doc.DataTo(&out)
-	if err != nil {
-		return nil, err
+	fmt.Println(db.receipts)
+
+	for k, v := range db.receipts {
+		if v.ChainPrefix == chainPrefix && v.Username == username {
+			log.Infof("found: (%s)%s (%s)", chainPrefix, username, v.FundedAt)
+			return &db.receipts[k], nil
+		}
 	}
 
-	return &out, nil
+	log.Infof("user: %s chain:%s was not found", username, chainPrefix)
+	return nil, nil
 }
 
 func mkPKEY(username string, chainPrefix string) string {

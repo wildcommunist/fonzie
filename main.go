@@ -166,21 +166,21 @@ type FaucetHandler struct {
 	faucets map[string]ChainFaucet
 	quit    chan bool
 	chains  chain.Chains
-	db      db.Db
+	db      *db.Db
 	ctx     context.Context
 
 	cmd *regexp.Regexp
 }
 
-func NewFaucetHandler(chains chain.Chains, db db.Db) FaucetHandler {
-	re, err := regexp.Compile("!(request|help)(.*)")
+func NewFaucetHandler(chains chain.Chains, db *db.Db) FaucetHandler {
+	re, err := regexp.Compile("!(request|help|status)(.*)")
 	if err != nil {
 		log.Fatal(err)
 	}
 	var faucets = make(map[string]ChainFaucet)
 	var quit = make(chan bool)
 	for _, c := range chains {
-		f := ChainFaucet{make(chan FaucetReq), c}
+		f := ChainFaucet{make(chan FaucetReq), make(chan StatusReq), c}
 		faucets[c.Prefix] = f
 		go f.Consume(quit)
 	}
@@ -261,6 +261,7 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 
 				// Immediately respond to Discord
 				sendReaction(s, m, "👍")
+				sendReaction(s, m, "⚙️")
 				faucet.channel <- FaucetReq{recipient, coins, fees, s, m}
 
 				err = fh.db.SaveFundingReceipt(fh.ctx, db.FundingReceipt{
@@ -273,6 +274,15 @@ func (fh FaucetHandler) handleDispense(s *discordgo.Session, m *discordgo.Messag
 					log.Error(err)
 				}
 
+			case "status":
+				// Display faucet status
+				faucet, ok := fh.faucets["andr"]
+				if !ok {
+					reportError(s, m, fmt.Errorf("%s chain prefix is not supported", "andr"))
+					return
+				}
+				sendReaction(s, m, "⚙️")
+				faucet.status <- StatusReq{s, m}
 			default:
 				help(s, m, fh.chains)
 			}
@@ -338,4 +348,11 @@ func sendReaction(s *discordgo.Session, m *discordgo.MessageCreate, reaction str
 		return nil
 	}
 	return s.MessageReactionAdd(m.ChannelID, m.ID, reaction)
+}
+
+func removedReaction(s *discordgo.Session, m *discordgo.MessageCreate, reaction string) error {
+	if isSilent || m.Author.Bot {
+		return nil
+	}
+	return s.MessageReactionRemove(m.ChannelID, m.ID, reaction, "@me")
 }

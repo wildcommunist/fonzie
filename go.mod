@@ -11,14 +11,14 @@ replace github.com/keybase/go-keychain => github.com/99designs/go-keychain v0.0.
 require (
 	cloud.google.com/go/firestore v1.6.1
 	firebase.google.com/go v3.13.0+incompatible
+	github.com/Entrio/subenv v0.0.0-20210211031353-9ddad865e314
 	github.com/bwmarrin/discordgo v0.25.0
 	github.com/cosmos/btcutil v1.0.4
-	github.com/cosmos/cosmos-sdk v0.45.4
+	github.com/cosmos/cosmos-sdk v0.45.5
 	github.com/go-resty/resty/v2 v2.7.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/strangelove-ventures/lens v0.3.0
 	google.golang.org/api v0.77.0
-	google.golang.org/grpc v1.46.0
 )
 
 require (
@@ -124,6 +124,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20220414192740-2d67ff6cf2b4 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
