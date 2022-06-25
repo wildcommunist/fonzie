@@ -22,6 +22,9 @@ go build .
 * `FUNDING`          -- Similar to CHAINS, value is how much funding to sip with each tap
 * `FUNDING_INTERVAL` -- Optional; specify funding interval -- e.g. `12h`. Defaults to 12 hours.
 * `SILENT`           -- if set to a non-empty string omit all responses except error notifications
+* `LCD_ADDRESS`      -- Specify LCD address for bot balance fetching
+* `SEND_DM`          -- Should bot send a DM with the tap messages? default `false`
+* `FINDER_URL`       -- URL to use for transaction look
 
 #### An example configuration supporting Umee, Atom, Juno & Osmosis
 
