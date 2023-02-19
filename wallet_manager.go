@@ -71,7 +71,7 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 	log.Info("starting worker ", cf.chain.Prefix)
 	var r FaucetReq
 	var rs []FaucetReq
-	const interval = time.Second * 7
+	const interval = time.Second * 1
 	var t = time.NewTicker(interval)
 
 	for {

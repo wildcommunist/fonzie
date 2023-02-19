@@ -101,7 +101,12 @@ func initChains() chain.Chains {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("CHAINS: %#v", chains)
+
+	for _, c := range chains {
+		fmt.Println(c)
+	}
+
+	fmt.Println(chains)
 	// parse chains config
 	err = json.Unmarshal([]byte(rawFunding), &funding)
 	if err != nil {
@@ -123,6 +128,18 @@ func main() {
 		log.Infof("pruned %d receipts", numPruned)
 		os.Exit(0)
 	}
+
+	go func() {
+		for {
+			log.Info("Pruning thread started...")
+			numPruned, err := db.PruneExpiredReceipts(ctx, time.Now().Add(-fundingInterval))
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Infof("pruned %d receipts", numPruned)
+			time.Sleep(time.Second * 30)
+		}
+	}()
 
 	chains := initChains()
 
