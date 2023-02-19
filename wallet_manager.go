@@ -89,7 +89,6 @@ func (cf ChainFaucet) Consume(quit chan bool) {
 		case sr := <-cf.status:
 			cf.processStatusRequests(sr)
 		case <-t.C:
-			log.Infof("%s worker ticker, #num req: %d", cf.chain.Prefix, len(rs))
 			if len(rs) > 0 {
 				cf.processRequests(rs)
 				rs = make([]FaucetReq, 0)

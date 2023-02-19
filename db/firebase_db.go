@@ -102,14 +102,21 @@ func (db *Db) PruneExpiredReceipts(ctx context.Context, beforeFundingTime time.T
 
 	db.rw.Lock()
 	defer db.rw.Unlock()
-	for k, v := range db.receipts {
-		if v.FundedAt.Before(beforeFundingTime) {
-			db.receipts = append(db.receipts[:k], db.receipts[k+1:]...)
+
+	receipts := FundingReceipts{}
+	count := len(db.receipts)
+
+	for _, v := range db.receipts {
+		if v.FundedAt.After(beforeFundingTime) {
+			receipts = append(receipts, v)
+			//db.receipts = append(db.receipts[:k], db.receipts[k+1:]...)
 		}
 	}
 
+	db.receipts = receipts
+
 	// Delete stale receipts
-	return 0, nil
+	return count - len(db.receipts), nil
 }
 
 func (db *Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, username string, chainPrefix string) (*FundingReceipt, error) {
@@ -117,8 +124,6 @@ func (db *Db) GetFundingReceiptByUsernameAndChainPrefix(ctx context.Context, use
 
 	db.rw.RLock()
 	defer db.rw.RUnlock()
-
-	fmt.Println(db.receipts)
 
 	for k, v := range db.receipts {
 		if v.ChainPrefix == chainPrefix && v.Username == username {
